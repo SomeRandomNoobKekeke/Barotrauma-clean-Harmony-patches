@@ -14,6 +14,19 @@ namespace CleanPatches
 {
   public partial class Mod : IAssemblyPlugin
   {
+    [ThisIsHowToPatchIt]
+    public static void PatchGUIStyle()
+    {
+      harmony.Patch(
+        original: typeof(GUIStyle).GetMethod("Apply", AccessTools.all, new Type[]{
+          typeof(GUIComponent),
+          typeof(Identifier),
+          typeof(GUIComponent),
+        }),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GUIStyle_Apply_Replace"))
+      );
+    }
+
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GUI/GUIStyle.cs#L204
     public static bool GUIStyle_Apply_Replace(GUIComponent targetComponent, Identifier styleName, GUIComponent parent)
     {

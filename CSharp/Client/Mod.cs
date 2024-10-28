@@ -16,14 +16,14 @@ namespace CleanPatches
   {
     public void PatchOnClient()
     {
-      harmony.Patch(
-        original: typeof(GUIStyle).GetMethod("Apply", AccessTools.all, new Type[]{
-          typeof(GUIComponent),
-          typeof(Identifier),
-          typeof(GUIComponent),
-        }),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GUIStyle_Apply_Replace"))
-      );
+      // harmony.Patch(
+      //   original: typeof(GUIStyle).GetMethod("Apply", AccessTools.all, new Type[]{
+      //     typeof(GUIComponent),
+      //     typeof(Identifier),
+      //     typeof(GUIComponent),
+      //   }),
+      //   prefix: new HarmonyMethod(typeof(Mod).GetMethod("GUIStyle_Apply_Replace"))
+      // );
     }
   }
 }

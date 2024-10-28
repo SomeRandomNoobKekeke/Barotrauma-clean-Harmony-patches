@@ -12,16 +12,19 @@ using Microsoft.Xna.Framework;
 
 namespace CleanPatches
 {
+  public class ThisIsHowToPatchIt : System.Attribute { }
+
   public partial class Mod : IAssemblyPlugin
   {
-    public Harmony harmony;
+    public static Harmony harmony;
 
     public void Initialize()
     {
       harmony = new Harmony("clean.patches");
 
-      PatchOnBothSides();
+      ApplyAllHarmonyPatches();
 
+      PatchOnBothSides();
 #if CLIENT
       PatchOnClient();
 #elif SERVER
@@ -32,6 +35,25 @@ namespace CleanPatches
     public void PatchOnBothSides()
     {
 
+    }
+
+    // Note: i'm aware that Harmony supports Annotational patching
+    // But i want to show an example of manual patching
+    // It's more flexible and i usually prefer it
+    public void ApplyAllHarmonyPatches()
+    {
+      Assembly CallingAssembly = Assembly.GetCallingAssembly();
+
+      foreach (Type type in CallingAssembly.GetTypes())
+      {
+        foreach (MethodInfo mi in type.GetMethods(AccessTools.all))
+        {
+          if (Attribute.IsDefined(mi, typeof(ThisIsHowToPatchIt)))
+          {
+            mi.Invoke(null, new object[] { });
+          }
+        }
+      }
     }
 
     public static void log(object msg, Color? cl = null)
