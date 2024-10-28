@@ -23,9 +23,9 @@ namespace CleanPatches
       PatchOnBothSides();
 
 #if CLIENT
-  PatchOnClient();
+      PatchOnClient();
 #elif SERVER
-  PatchOnServer();
+      PatchOnServer();
 #endif
     }
 
