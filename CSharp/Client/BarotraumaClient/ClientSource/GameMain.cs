@@ -44,7 +44,85 @@ namespace CleanPatches
         original: typeof(GameMain).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameMain_Update_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(GameMain).GetMethod("Draw", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameMain_Draw_Replace"))
+      );
     }
+
+
+    public static bool GameMain_Draw_Replace(GameTime gameTime, GameMain __instance)
+    {
+      GameMain _ = __instance;
+
+      Stopwatch sw = new Stopwatch();
+      sw.Start();
+
+      _.FixRazerCortex();
+
+      double deltaTime = gameTime.ElapsedGameTime.TotalSeconds;
+
+      if (Timing.FrameLimit > 0)
+      {
+        double step = 1.0 / Timing.FrameLimit;
+        while (!GameSettings.CurrentConfig.Graphics.VSync && sw.Elapsed.TotalSeconds + deltaTime < step)
+        {
+          Thread.Sleep(1);
+        }
+      }
+
+      GameMain.PerformanceCounter.Update(sw.Elapsed.TotalSeconds + deltaTime);
+
+      if (_.loadingScreenOpen)
+      {
+        GameMain.TitleScreen.Draw(GameMain.spriteBatch, _.GraphicsDevice, (float)deltaTime);
+      }
+      else if (_.HasLoaded)
+      {
+        Screen.Selected.Draw(deltaTime, _.GraphicsDevice, GameMain.spriteBatch);
+      }
+
+      if (GameMain.DebugDraw && GUI.MouseOn != null)
+      {
+        GameMain.spriteBatch.Begin();
+        if (PlayerInput.IsCtrlDown() && PlayerInput.KeyDown(Keys.G))
+        {
+          List<GUIComponent> hierarchy = new List<GUIComponent>();
+          var currComponent = GUI.MouseOn;
+          while (currComponent != null)
+          {
+            hierarchy.Add(currComponent);
+            currComponent = currComponent.Parent;
+          }
+
+          Color[] colors = { Color.Lime, Color.Yellow, Color.Aqua, Color.Red };
+          for (int index = 0; index < hierarchy.Count; index++)
+          {
+            var component = hierarchy[index];
+            if (component is { MouseRect: var mouseRect, Rect: var rect })
+            {
+              if (mouseRect.IsEmpty) { mouseRect = rect; }
+              mouseRect.Location += (index % 2, (index % 4) / 2);
+              GUI.DrawRectangle(GameMain.spriteBatch, mouseRect, colors[index % 4]);
+            }
+          }
+        }
+        else
+        {
+          GUI.DrawRectangle(GameMain.spriteBatch, GUI.MouseOn.MouseRect, Color.Lime);
+          GUI.DrawRectangle(GameMain.spriteBatch, GUI.MouseOn.Rect, Color.Cyan);
+        }
+        GameMain.spriteBatch.End();
+      }
+
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Draw", sw.ElapsedTicks);
+      GameMain.PerformanceCounter.DrawTimeGraph.Update(sw.ElapsedTicks * 1000.0f / (float)Stopwatch.Frequency);
+
+      return false;
+    }
+
 
     public static bool GameMain_Update_Replace(GameTime gameTime, GameMain __instance)
     {
