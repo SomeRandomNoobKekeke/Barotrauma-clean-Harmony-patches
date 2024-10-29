@@ -9,6 +9,10 @@ using Barotrauma;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 
+using System.Runtime.CompilerServices;
+[assembly: IgnoresAccessChecksTo("Barotrauma")]
+[assembly: IgnoresAccessChecksTo("DedicatedServer")]
+[assembly: IgnoresAccessChecksTo("BarotraumaCore")]
 
 namespace CleanPatches
 {
