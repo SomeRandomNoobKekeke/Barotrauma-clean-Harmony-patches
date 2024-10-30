@@ -30,6 +30,11 @@ namespace CleanPatches
     public static void PatchClientSubmarine()
     {
       harmony.Patch(
+        original: typeof(Submarine).GetMethod("CullEntities", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_CullEntities_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(Submarine).GetMethod("DrawFront", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawFront_Replace"))
       );
@@ -38,6 +43,70 @@ namespace CleanPatches
         original: typeof(Submarine).GetMethod("DrawBack", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawBack_Replace"))
       );
+    }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L35
+    public static bool Submarine_CullEntities_Replace(Camera cam)
+    {
+      Rectangle camView = cam.WorldView;
+      camView = new Rectangle(camView.X - Submarine.CullMargin, camView.Y + Submarine.CullMargin, camView.Width + Submarine.CullMargin * 2, camView.Height + Submarine.CullMargin * 2);
+
+      if (Level.Loaded?.Renderer?.CollapseEffectStrength is > 0.0f)
+      {
+        //force everything to be visible when the collapse effect (which moves everything to a single point) is active
+        camView = Rectangle.Union(Submarine.AbsRect(camView.Location.ToVector2(), camView.Size.ToVector2()), new Rectangle(Point.Zero, Level.Loaded.Size));
+        camView.Y += camView.Height;
+      }
+
+      if (Math.Abs(camView.X - Submarine.prevCullArea.X) < Submarine.CullMoveThreshold &&
+          Math.Abs(camView.Y - Submarine.prevCullArea.Y) < Submarine.CullMoveThreshold &&
+          Math.Abs(camView.Right - Submarine.prevCullArea.Right) < Submarine.CullMoveThreshold &&
+          Math.Abs(camView.Bottom - Submarine.prevCullArea.Bottom) < Submarine.CullMoveThreshold &&
+          Submarine.prevCullTime > Timing.TotalTime - Submarine.CullInterval)
+      {
+        return false;
+      }
+
+      Submarine.visibleSubs.Clear();
+      foreach (Submarine sub in Submarine.Loaded)
+      {
+        if (Level.Loaded != null && sub.WorldPosition.Y < Level.MaxEntityDepth) { continue; }
+
+        Rectangle worldBorders = new Rectangle(
+            sub.VisibleBorders.X + (int)sub.WorldPosition.X,
+            sub.VisibleBorders.Y + (int)sub.WorldPosition.Y,
+            sub.VisibleBorders.Width,
+            sub.VisibleBorders.Height);
+
+        if (Submarine.RectsOverlap(worldBorders, camView))
+        {
+          Submarine.visibleSubs.Add(sub);
+        }
+      }
+
+      if (Submarine.visibleEntities == null)
+      {
+        Submarine.visibleEntities = new List<MapEntity>(MapEntity.MapEntityList.Count);
+      }
+      else
+      {
+        Submarine.visibleEntities.Clear();
+      }
+
+      foreach (MapEntity entity in MapEntity.MapEntityList)
+      {
+        if (entity == null || entity.Removed) { continue; }
+        if (entity.Submarine != null)
+        {
+          if (!Submarine.visibleSubs.Contains(entity.Submarine)) { continue; }
+        }
+        if (entity.IsVisible(camView)) { Submarine.visibleEntities.Add(entity); }
+      }
+
+      Submarine.prevCullArea = camView;
+      Submarine.prevCullTime = Timing.TotalTime;
+
+      return false;
     }
 
 
@@ -90,7 +159,7 @@ namespace CleanPatches
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L224
-    public static void Submarine_DrawBack_Replace(SpriteBatch spriteBatch, bool editing = false, Predicate<MapEntity> predicate = null)
+    public static bool Submarine_DrawBack_Replace(SpriteBatch spriteBatch, bool editing = false, Predicate<MapEntity> predicate = null)
     {
       var entitiesToRender = !editing && Submarine.visibleEntities != null ? Submarine.visibleEntities : MapEntity.MapEntityList;
 
@@ -105,6 +174,8 @@ namespace CleanPatches
 
         e.Draw(spriteBatch, editing, true);
       }
+
+      return false;
     }
   }
 }
