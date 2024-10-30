@@ -16,7 +16,7 @@ namespace CleanPatches
   {
 
     [ThisIsHowToPatchIt]
-    public static void PatchGameScreen()
+    public static void PatchSharedGameScreen()
     {
       harmony.Patch(
         original: typeof(GameScreen).GetMethod("Update", AccessTools.all),

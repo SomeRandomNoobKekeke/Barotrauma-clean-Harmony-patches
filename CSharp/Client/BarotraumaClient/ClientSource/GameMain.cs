@@ -38,7 +38,7 @@ namespace CleanPatches
   public partial class Mod : IAssemblyPlugin
   {
     [ThisIsHowToPatchIt]
-    public static void PatchGameMain()
+    public static void PatchClientGameMain()
     {
       harmony.Patch(
         original: typeof(GameMain).GetMethod("Update", AccessTools.all),

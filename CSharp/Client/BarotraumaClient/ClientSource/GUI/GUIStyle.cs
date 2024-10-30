@@ -15,7 +15,7 @@ namespace CleanPatches
   public partial class Mod : IAssemblyPlugin
   {
     [ThisIsHowToPatchIt]
-    public static void PatchGUIStyle()
+    public static void PatchClientGUIStyle()
     {
       harmony.Patch(
         original: typeof(GUIStyle).GetMethod("Apply", AccessTools.all, new Type[]{
