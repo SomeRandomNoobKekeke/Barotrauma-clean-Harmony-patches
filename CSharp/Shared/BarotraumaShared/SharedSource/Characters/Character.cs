@@ -19,10 +19,12 @@ namespace CleanPatches
     public static void PatchSharedCharacter()
     {
       harmony.Patch(
-        original: typeof(GameScreen).GetMethod("Update", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameScreen_Update_Replace"))
+        original: typeof(Character).GetMethod("UpdateAll", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_UpdateAll_Replace"))
       );
     }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L3366
     public static bool Character_UpdateAll_Replace(float deltaTime, Camera cam)
     {
       if (GameMain.NetworkMember == null || !GameMain.NetworkMember.IsClient)
