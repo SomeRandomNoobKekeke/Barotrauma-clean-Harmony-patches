@@ -57,6 +57,12 @@ namespace CleanPatches
           }
         }
       }
+
+      // var originalMethods = Harmony.GetAllPatchedMethods();
+      // foreach (MethodBase method in originalMethods)
+      // {
+      //   log($"{method.DeclaringType}.{method}");
+      // }
     }
 
     public static void log(object msg, Color? cl = null)
