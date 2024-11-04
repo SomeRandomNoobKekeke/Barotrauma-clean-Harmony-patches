@@ -40,6 +40,8 @@ namespace CleanPatches
       );
     }
 
+    // Note: if you test this in sub editor and see no effect then it's because it's a SubEditorScreen
+
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs#L98
     public static bool GameScreen_Draw_Replace(double deltaTime, GraphicsDevice graphics, SpriteBatch spriteBatch, GameScreen __instance)
     {
