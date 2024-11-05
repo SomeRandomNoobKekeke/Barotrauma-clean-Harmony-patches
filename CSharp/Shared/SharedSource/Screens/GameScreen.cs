@@ -228,8 +228,8 @@ namespace CleanPatches
       GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
       _.UpdateProjSpecific(deltaTime);
 #endif
-      // it seems that on server side this method is not even compiled because it's empty
-      // _.UpdateProjSpecific(deltaTime);
+      // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
+      //_.UpdateProjSpecific(deltaTime);
 
 #if RUN_PHYSICS_IN_SEPARATE_THREAD
       }
