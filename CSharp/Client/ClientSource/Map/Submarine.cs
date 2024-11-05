@@ -43,6 +43,11 @@ namespace CleanPatches
         original: typeof(Submarine).GetMethod("DrawBack", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawBack_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Submarine).GetMethod("DrawPaintedColors", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawPaintedColors_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L35
@@ -173,6 +178,30 @@ namespace CleanPatches
         }
 
         e.Draw(spriteBatch, editing, true);
+      }
+
+      return false;
+    }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L204
+    public static bool Submarine_DrawPaintedColors_Replace(SpriteBatch spriteBatch, bool editing = false, Predicate<MapEntity> predicate = null)
+    {
+      var entitiesToRender = !editing && Submarine.visibleEntities != null ? Submarine.visibleEntities : MapEntity.MapEntityList;
+
+      foreach (MapEntity e in entitiesToRender)
+      {
+        if (e is Hull hull)
+        {
+          if (hull.SupportsPaintedColors)
+          {
+            if (predicate != null)
+            {
+              if (!predicate(e)) { continue; }
+            }
+            hull.DrawSectionColors(spriteBatch);
+          }
+        }
       }
 
       return false;
