@@ -116,8 +116,10 @@ namespace CleanPatches
 
       if (MapEntity.mapEntityUpdateTick % MapEntity.MapEntityUpdateInterval == 0)
       {
+        // Note: #if CLIENT is needed because on server side UpdateProjSpecific isn't compiled 
+#if CLIENT
         MapEntity.UpdateAllProjSpecific(deltaTime * MapEntity.MapEntityUpdateInterval);
-
+#endif
         MapEntity.Spawner?.Update();
       }
 

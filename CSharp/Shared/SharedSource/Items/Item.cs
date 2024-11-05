@@ -189,7 +189,12 @@ namespace CleanPatches
           //the item has gone through the surface of the water
           if (!wasInWater && _.CurrentHull != null && _.body != null && _.body.LinearVelocity.Y < -1.0f)
           {
+
+            // Note: #if CLIENT is needed because on server side Splash isn't compiled 
+#if CLIENT
             _.Splash();
+#endif
+
             if (_.GetComponent<Projectile>() is not { IsActive: true })
             {
               //slow the item down (not physically accurate, but looks good enough)

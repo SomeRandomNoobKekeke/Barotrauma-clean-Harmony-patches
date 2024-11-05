@@ -27,7 +27,7 @@ namespace CleanPatches
   public partial class Mod : IAssemblyPlugin
   {
     [ThisIsHowToPatchIt]
-    public static void PatchClientGameSession()
+    public static void PatchSharedGameSession()
     {
       harmony.Patch(
         original: typeof(GameSession).GetMethod("Update", AccessTools.all),
@@ -49,7 +49,11 @@ namespace CleanPatches
       {
         _.missions[i].Update(deltaTime);
       }
+
+      // Note: #if CLIENT is needed because on server side UpdateProjSpecific isn't compiled 
+#if CLIENT
       _.UpdateProjSpecific(deltaTime);
+#endif
 
       return false;
     }
