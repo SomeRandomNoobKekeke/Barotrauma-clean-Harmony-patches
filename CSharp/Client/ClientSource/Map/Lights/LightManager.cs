@@ -35,6 +35,11 @@ namespace CleanPatches
         original: typeof(LightManager).GetMethod("RenderLightMap", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("LightManager_RenderLightMap_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(LightManager).GetMethod("UpdateHighlights", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("LightManager_UpdateHighlights_Replace"))
+      );
     }
 
 
@@ -171,8 +176,6 @@ namespace CleanPatches
 
       return false;
     }
-
-
 
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManager.cs#L246
@@ -492,5 +495,114 @@ namespace CleanPatches
     }
 
 
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManager.cs#L555
+    public static bool LightManager_UpdateHighlights_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, Matrix spriteBatchTransform, Camera cam, LightManager __instance, ref bool __result)
+    {
+      LightManager _ = __instance;
+
+      if (GUI.DisableItemHighlights) { __result = false; return false; }
+
+      _.highlightedEntities.Clear();
+      if (Character.Controlled != null && (!Character.Controlled.IsKeyDown(InputType.Aim) || Character.Controlled.HeldItems.Any(it => it.GetComponent<Sprayer>() == null)))
+      {
+        if (Character.Controlled.FocusedItem != null)
+        {
+          _.highlightedEntities.Add(Character.Controlled.FocusedItem);
+        }
+        if (Character.Controlled.FocusedCharacter != null)
+        {
+          _.highlightedEntities.Add(Character.Controlled.FocusedCharacter);
+        }
+        foreach (MapEntity me in MapEntity.HighlightedEntities)
+        {
+          if (me is Item item && item != Character.Controlled.FocusedItem)
+          {
+            _.highlightedEntities.Add(item);
+          }
+        }
+      }
+      if (_.highlightedEntities.Count == 0) { __result = false; return false; }
+
+      //draw characters in light blue first
+      graphics.SetRenderTarget(_.HighlightMap);
+      _.SolidColorEffect.CurrentTechnique = _.SolidColorEffect.Techniques["SolidColor"];
+      _.SolidColorEffect.Parameters["color"].SetValue(Color.LightBlue.ToVector4());
+      _.SolidColorEffect.CurrentTechnique.Passes[0].Apply();
+      DeformableSprite.Effect.CurrentTechnique = DeformableSprite.Effect.Techniques["DeformShaderSolidColor"];
+      DeformableSprite.Effect.Parameters["solidColor"].SetValue(Color.LightBlue.ToVector4());
+      DeformableSprite.Effect.CurrentTechnique.Passes[0].Apply();
+      spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, samplerState: SamplerState.LinearWrap, effect: _.SolidColorEffect, transformMatrix: spriteBatchTransform);
+      foreach (Entity highlighted in _.highlightedEntities)
+      {
+        if (highlighted is Item item)
+        {
+          if (item.IconStyle != null && (item != Character.Controlled.FocusedItem || Character.Controlled.FocusedItem == null))
+          {
+            //wait until next pass
+          }
+          else
+          {
+            item.Draw(spriteBatch, false, true);
+          }
+        }
+        else if (highlighted is Character character)
+        {
+          character.Draw(spriteBatch, cam);
+        }
+      }
+      spriteBatch.End();
+
+      //draw items with iconstyles in the style's color
+      spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive, samplerState: SamplerState.LinearWrap, effect: _.SolidColorEffect, transformMatrix: spriteBatchTransform);
+      foreach (Entity highlighted in _.highlightedEntities)
+      {
+        if (highlighted is Item item)
+        {
+          if (item.IconStyle != null && (item != Character.Controlled.FocusedItem || Character.Controlled.FocusedItem == null))
+          {
+            _.SolidColorEffect.Parameters["color"].SetValue(item.IconStyle.Color.ToVector4());
+            _.SolidColorEffect.CurrentTechnique.Passes[0].Apply();
+            item.Draw(spriteBatch, false, true);
+          }
+        }
+      }
+      spriteBatch.End();
+
+      //draw characters in black with a bit of blur, leaving the white edges visible
+      float phase = (float)(Math.Sin(Timing.TotalTime * 3.0f) + 1.0f) / 2.0f; //phase oscillates between 0 and 1
+      Vector4 overlayColor = Color.Black.ToVector4() * MathHelper.Lerp(0.5f, 0.9f, phase);
+      _.SolidColorEffect.Parameters["color"].SetValue(overlayColor);
+      _.SolidColorEffect.CurrentTechnique = _.SolidColorEffect.Techniques["SolidColorBlur"];
+      _.SolidColorEffect.CurrentTechnique.Passes[0].Apply();
+      DeformableSprite.Effect.Parameters["solidColor"].SetValue(overlayColor);
+      DeformableSprite.Effect.CurrentTechnique.Passes[0].Apply();
+      spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, samplerState: SamplerState.LinearWrap, effect: _.SolidColorEffect, transformMatrix: spriteBatchTransform);
+      foreach (Entity highlighted in _.highlightedEntities)
+      {
+        if (highlighted is Item item)
+        {
+          _.SolidColorEffect.Parameters["blurDistance"].SetValue(0.02f);
+          item.Draw(spriteBatch, false, true);
+        }
+        else if (highlighted is Character character)
+        {
+          _.SolidColorEffect.Parameters["blurDistance"].SetValue(0.05f);
+          character.Draw(spriteBatch, cam);
+        }
+      }
+      spriteBatch.End();
+
+      //raster pattern on top of everything
+      spriteBatch.Begin(blendState: BlendState.NonPremultiplied, samplerState: SamplerState.LinearWrap);
+      spriteBatch.Draw(_.highlightRaster,
+          new Rectangle(0, 0, _.HighlightMap.Width, _.HighlightMap.Height),
+          new Rectangle(0, 0, (int)(_.HighlightMap.Width / _.currLightMapScale * 0.5f), (int)(_.HighlightMap.Height / _.currLightMapScale * 0.5f)),
+          Color.White * 0.5f);
+      spriteBatch.End();
+
+      DeformableSprite.Effect.CurrentTechnique = DeformableSprite.Effect.Techniques["DeformShader"];
+
+      __result = true; return false;
+    }
   }
 }
