@@ -1,3 +1,5 @@
+#define RUN_PHYSICS_IN_SEPARATE_THREAD
+
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -8,7 +10,14 @@ using System.Linq;
 using Barotrauma;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
+
+using Microsoft.Xna.Framework;
+using System.Threading;
 using FarseerPhysics.Dynamics;
+#if DEBUG && CLIENT
+using System;
+using Microsoft.Xna.Framework.Input;
+#endif
 
 namespace CleanPatches
 {
@@ -19,10 +28,90 @@ namespace CleanPatches
     public static void PatchSharedGameScreen()
     {
       harmony.Patch(
+        original: typeof(GameScreen).GetMethod("Select", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameScreen_Select_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(GameScreen).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameScreen_Update_Replace"))
       );
     }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs#L46
+    public static bool GameScreen_Select_Replace(GameScreen __instance)
+    {
+      GameScreen _ = __instance;
+
+
+      //base.Select();
+      // just crashes the game
+      //typeof(Screen).GetMethod("Select", AccessTools.all).Invoke(_, new object[] { });
+
+      // also crashes the game, but not in sub editor test
+      // ---------------------- Screen.Select ----------------------
+      Screen __ = (Screen)_; // guh
+
+      if (Screen.Selected != null && Screen.Selected != __)
+      {
+        Screen.Selected.Deselect();
+#if CLIENT
+        GameMain.ParticleManager.ClearParticles();
+        GUIContextMenu.CurrentContextMenu = null;
+        GUI.ClearCursorWait();
+        //make sure any textbox in the previously selected screen doesn't stay selected
+        if (GUI.KeyboardDispatcher.Subscriber != DebugConsole.TextBox)
+        {
+          GUI.KeyboardDispatcher.Subscriber = null;
+          GUI.ScreenChanged = true;
+        }
+        SubmarinePreview.Close();
+
+        // Make sure the saving indicator is disabled when returning to main menu or lobby
+        if (__ == GameMain.MainMenuScreen || __ == GameMain.NetLobbyScreen)
+        {
+          GUI.DisableSavingIndicatorDelayed();
+        }
+        GameMain.ResetIMEWorkaround();
+#endif
+      }
+
+#if CLIENT
+      GUI.SettingsMenuOpen = false;
+#endif
+      Screen.Selected = __;
+      // ---------------------- Screen.Select ----------------------
+
+
+#if CLIENT
+      if (Character.Controlled != null)
+      {
+        _.cam.Position = Character.Controlled.WorldPosition;
+        _.cam.UpdateTransform(true);
+      }
+      else if (Submarine.MainSub != null)
+      {
+        _.cam.Position = Submarine.MainSub.WorldPosition;
+        _.cam.UpdateTransform(true);
+      }
+      GameMain.GameSession?.CrewManager?.AutoShowCrewList();
+#endif
+
+      MapEntity.ClearHighlightedEntities();
+
+#if RUN_PHYSICS_IN_SEPARATE_THREAD
+      var physicsThread = new Thread(_.ExecutePhysics)
+      {
+        Name = "Physics thread",
+        IsBackground = true
+      };
+      physicsThread.Start();
+#endif
+
+      return false;
+    }
+
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs#L99
     public static bool GameScreen_Update_Replace(double deltaTime, GameScreen __instance)
@@ -30,8 +119,8 @@ namespace CleanPatches
       GameScreen _ = __instance;
 
 #if RUN_PHYSICS_IN_SEPARATE_THREAD
-      physicsTime += deltaTime;
-      lock (updateLock)
+      _.physicsTime += deltaTime;
+      lock (_.updateLock)
       {
 #endif
 
@@ -58,61 +147,61 @@ namespace CleanPatches
 #endif
 
 #if CLIENT
-      GameMain.LightManager?.Update((float)deltaTime);
+        GameMain.LightManager?.Update((float)deltaTime);
 #endif
 
-      _.GameTime += deltaTime;
+        _.GameTime += deltaTime;
 
-      foreach (PhysicsBody body in PhysicsBody.List)
-      {
-        if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static) { body.Update(); }
-      }
-      MapEntity.ClearHighlightedEntities();
-
-#if CLIENT
-      var sw = new System.Diagnostics.Stopwatch();
-      sw.Start();
-#endif
-
-      GameMain.GameSession?.Update((float)deltaTime);
-
-#if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:GameSession", sw.ElapsedTicks);
-      sw.Restart();
-
-      GameMain.ParticleManager.Update((float)deltaTime);
-
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Particles", sw.ElapsedTicks);
-      sw.Restart();
-
-      if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, _.cam);
-
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Level", sw.ElapsedTicks);
-
-      if (Character.Controlled is { } controlled)
-      {
-        if (controlled.SelectedItem != null && controlled.CanInteractWith(controlled.SelectedItem))
+        foreach (PhysicsBody body in PhysicsBody.List)
         {
-          controlled.SelectedItem.UpdateHUD(_.cam, controlled, (float)deltaTime);
+          if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static) { body.Update(); }
         }
-        if (controlled.Inventory != null)
+        MapEntity.ClearHighlightedEntities();
+
+#if CLIENT
+        var sw = new System.Diagnostics.Stopwatch();
+        sw.Start();
+#endif
+
+        GameMain.GameSession?.Update((float)deltaTime);
+
+#if CLIENT
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:GameSession", sw.ElapsedTicks);
+        sw.Restart();
+
+        GameMain.ParticleManager.Update((float)deltaTime);
+
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Particles", sw.ElapsedTicks);
+        sw.Restart();
+
+        if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, _.cam);
+
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Level", sw.ElapsedTicks);
+
+        if (Character.Controlled is { } controlled)
         {
-          foreach (Item item in controlled.Inventory.AllItems)
+          if (controlled.SelectedItem != null && controlled.CanInteractWith(controlled.SelectedItem))
           {
-            if (controlled.HasEquippedItem(item))
+            controlled.SelectedItem.UpdateHUD(_.cam, controlled, (float)deltaTime);
+          }
+          if (controlled.Inventory != null)
+          {
+            foreach (Item item in controlled.Inventory.AllItems)
             {
-              item.UpdateHUD(_.cam, controlled, (float)deltaTime);
+              if (controlled.HasEquippedItem(item))
+              {
+                item.UpdateHUD(_.cam, controlled, (float)deltaTime);
+              }
             }
           }
         }
-      }
 
-      sw.Restart();
+        sw.Restart();
 
-      Character.UpdateAll((float)deltaTime, _.cam);
+        Character.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
             if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, Camera.Instance);
             Character.UpdateAll((float)deltaTime, Camera.Instance);
@@ -120,93 +209,93 @@ namespace CleanPatches
 
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Character", sw.ElapsedTicks);
-      sw.Restart();
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Character", sw.ElapsedTicks);
+        sw.Restart();
 #endif
 
-      StatusEffect.UpdateAll((float)deltaTime);
+        StatusEffect.UpdateAll((float)deltaTime);
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:StatusEffects", sw.ElapsedTicks);
-      sw.Restart();
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:StatusEffects", sw.ElapsedTicks);
+        sw.Restart();
 
-      if (Character.Controlled != null &&
-          Barotrauma.Lights.LightManager.ViewTarget != null)
-      {
-        Vector2 targetPos = Barotrauma.Lights.LightManager.ViewTarget.WorldPosition;
-        if (Barotrauma.Lights.LightManager.ViewTarget == Character.Controlled &&
-            (CharacterHealth.OpenHealthWindow != null || CrewManager.IsCommandInterfaceOpen || ConversationAction.IsDialogOpen))
+        if (Character.Controlled != null &&
+            Barotrauma.Lights.LightManager.ViewTarget != null)
         {
-          Vector2 screenTargetPos = new Vector2(GameMain.GraphicsWidth, GameMain.GraphicsHeight) * 0.5f;
-          if (CharacterHealth.OpenHealthWindow != null)
+          Vector2 targetPos = Barotrauma.Lights.LightManager.ViewTarget.WorldPosition;
+          if (Barotrauma.Lights.LightManager.ViewTarget == Character.Controlled &&
+              (CharacterHealth.OpenHealthWindow != null || CrewManager.IsCommandInterfaceOpen || ConversationAction.IsDialogOpen))
           {
-            screenTargetPos.X = GameMain.GraphicsWidth * (CharacterHealth.OpenHealthWindow.Alignment == Alignment.Left ? 0.6f : 0.4f);
+            Vector2 screenTargetPos = new Vector2(GameMain.GraphicsWidth, GameMain.GraphicsHeight) * 0.5f;
+            if (CharacterHealth.OpenHealthWindow != null)
+            {
+              screenTargetPos.X = GameMain.GraphicsWidth * (CharacterHealth.OpenHealthWindow.Alignment == Alignment.Left ? 0.6f : 0.4f);
+            }
+            else if (ConversationAction.IsDialogOpen)
+            {
+              screenTargetPos.Y = GameMain.GraphicsHeight * 0.4f;
+            }
+            Vector2 screenOffset = screenTargetPos - new Vector2(GameMain.GraphicsWidth / 2, GameMain.GraphicsHeight / 2);
+            screenOffset.Y = -screenOffset.Y;
+            targetPos -= screenOffset / _.cam.Zoom;
           }
-          else if (ConversationAction.IsDialogOpen)
-          {
-            screenTargetPos.Y = GameMain.GraphicsHeight * 0.4f;
-          }
-          Vector2 screenOffset = screenTargetPos - new Vector2(GameMain.GraphicsWidth / 2, GameMain.GraphicsHeight / 2);
-          screenOffset.Y = -screenOffset.Y;
-          targetPos -= screenOffset / _.cam.Zoom;
+          _.cam.TargetPos = targetPos;
         }
-        _.cam.TargetPos = targetPos;
-      }
 
-      _.cam.MoveCamera((float)deltaTime, allowZoom: GUI.MouseOn == null && !Inventory.IsMouseOnInventory);
+        _.cam.MoveCamera((float)deltaTime, allowZoom: GUI.MouseOn == null && !Inventory.IsMouseOnInventory);
 
-      Character.Controlled?.UpdateLocalCursor(_.cam);
+        Character.Controlled?.UpdateLocalCursor(_.cam);
 #endif
 
-      foreach (Submarine sub in Submarine.Loaded)
-      {
-        sub.SetPrevTransform(sub.Position);
-      }
-
-      foreach (PhysicsBody body in PhysicsBody.List)
-      {
-        if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static)
+        foreach (Submarine sub in Submarine.Loaded)
         {
-          body.SetPrevTransform(body.SimPosition, body.Rotation);
+          sub.SetPrevTransform(sub.Position);
         }
-      }
+
+        foreach (PhysicsBody body in PhysicsBody.List)
+        {
+          if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static)
+          {
+            body.SetPrevTransform(body.SimPosition, body.Rotation);
+          }
+        }
 
 #if CLIENT
-      MapEntity.UpdateAll((float)deltaTime, _.cam);
+        MapEntity.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
-            MapEntity.UpdateAll((float)deltaTime, Camera.Instance);
+      MapEntity.UpdateAll((float)deltaTime, Camera.Instance);
 #endif
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:MapEntity", sw.ElapsedTicks);
-      sw.Restart();
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:MapEntity", sw.ElapsedTicks);
+        sw.Restart();
 #endif
-      Character.UpdateAnimAll((float)deltaTime);
+        Character.UpdateAnimAll((float)deltaTime);
 
 #if CLIENT
-      Ragdoll.UpdateAll((float)deltaTime, _.cam);
+        Ragdoll.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
-            Ragdoll.UpdateAll((float)deltaTime, Camera.Instance);
+      Ragdoll.UpdateAll((float)deltaTime, Camera.Instance);
 #endif
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Ragdolls", sw.ElapsedTicks);
-      sw.Restart();
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Ragdolls", sw.ElapsedTicks);
+        sw.Restart();
 #endif
 
-      foreach (Submarine sub in Submarine.Loaded)
-      {
-        sub.Update((float)deltaTime);
-      }
+        foreach (Submarine sub in Submarine.Loaded)
+        {
+          sub.Update((float)deltaTime);
+        }
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Submarine", sw.ElapsedTicks);
-      sw.Restart();
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Submarine", sw.ElapsedTicks);
+        sw.Restart();
 #endif
 
 #if !RUN_PHYSICS_IN_SEPARATE_THREAD
@@ -224,12 +313,12 @@ namespace CleanPatches
 
 
 #if CLIENT
-      sw.Stop();
-      GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
-      _.UpdateProjSpecific(deltaTime);
+        sw.Stop();
+        GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
+        _.UpdateProjSpecific(deltaTime);
 #endif
-      // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
-      //_.UpdateProjSpecific(deltaTime);
+        // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
+        //_.UpdateProjSpecific(deltaTime);
 
 #if RUN_PHYSICS_IN_SEPARATE_THREAD
       }
