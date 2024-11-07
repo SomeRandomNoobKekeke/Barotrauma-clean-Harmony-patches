@@ -22,6 +22,46 @@ namespace CleanPatches
         original: typeof(BackgroundCreatureManager).GetMethod("SpawnCreatures", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("BackgroundCreatureManager_SpawnCreatures_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(BackgroundCreatureManager).GetMethod("Update", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("BackgroundCreatureManager_Update_Replace"))
+      );
+    }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs#L124
+    public static bool BackgroundCreatureManager_Update_Replace(float deltaTime, Camera cam, BackgroundCreatureManager __instance)
+    {
+      BackgroundCreatureManager _ = __instance;
+
+      if (_.checkVisibleTimer < 0.0f)
+      {
+        int margin = 500;
+        foreach (BackgroundCreature creature in _.creatures)
+        {
+          Rectangle extents = creature.GetExtents(cam);
+          bool wasVisible = creature.Visible;
+          creature.Visible =
+              extents.Right >= cam.WorldView.X - margin &&
+              extents.X <= cam.WorldView.Right + margin &&
+              extents.Bottom >= cam.WorldView.Y - cam.WorldView.Height - margin &&
+              extents.Y <= cam.WorldView.Y + margin;
+        }
+
+        _.checkVisibleTimer = BackgroundCreatureManager.VisibilityCheckInterval;
+      }
+      else
+      {
+        _.checkVisibleTimer -= deltaTime;
+      }
+
+      foreach (BackgroundCreature creature in _.creatures)
+      {
+        if (!creature.Visible) { continue; }
+        creature.Update(deltaTime);
+      }
+
+      return false;
     }
 
 
