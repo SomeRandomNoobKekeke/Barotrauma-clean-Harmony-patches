@@ -21,3 +21,5 @@ Secret method:
 - Improvise
 
 Sometimes there are calls to base classes, and you might not have access to base classes, sometimes vars are passed by ref, some methods might get inlined, types defined in nested namespace might not see Barotrauma namespace for some reason, and so on
+
+Also note that i was too lazy to test #if DEBUG stuff so it's broken
