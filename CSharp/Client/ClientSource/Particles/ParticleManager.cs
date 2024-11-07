@@ -29,6 +29,11 @@ namespace CleanPatches
       );
 
       harmony.Patch(
+        original: typeof(ParticleManager).GetMethod("Update", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("ParticleManager_Update_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(ParticleManager).GetMethod("CreateParticle", AccessTools.all, new Type[]{
           typeof(ParticlePrefab),
           typeof(Vector2),
@@ -42,6 +47,33 @@ namespace CleanPatches
         }),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("ParticleManager_CreateParticle_Replace"))
       );
+    }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L183
+    public static bool ParticleManager_Update_Replace(float deltaTime, ParticleManager __instance)
+    {
+      ParticleManager _ = __instance;
+
+      _.MaxParticles = GameSettings.CurrentConfig.Graphics.ParticleLimit;
+
+      for (int i = 0; i < _.particleCount; i++)
+      {
+        bool remove;
+        try
+        {
+          remove = _.particles[i].Update(deltaTime) == Particle.UpdateResult.Delete;
+        }
+        catch (Exception e)
+        {
+          DebugConsole.ThrowError("Particle update failed", e);
+          remove = true;
+        }
+
+        if (remove) { _.RemoveParticle(i); }
+      }
+
+      return false;
     }
 
 
