@@ -1,4 +1,4 @@
-#define RUN_PHYSICS_IN_SEPARATE_THREAD
+// #define RUN_PHYSICS_IN_SEPARATE_THREAD
 
 using System;
 using System.Reflection;
@@ -27,10 +27,11 @@ namespace CleanPatches
     [ThisIsHowToPatchIt]
     public static void PatchSharedGameScreen()
     {
-      harmony.Patch(
-        original: typeof(GameScreen).GetMethod("Select", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameScreen_Select_Replace"))
-      );
+      // i'm not sure that it's working correctly, so use it just for rofl
+      // harmony.Patch(
+      //   original: typeof(GameScreen).GetMethod("Select", AccessTools.all),
+      //   prefix: new HarmonyMethod(typeof(Mod).GetMethod("GameScreen_Select_Replace"))
+      // );
 
       harmony.Patch(
         original: typeof(GameScreen).GetMethod("Update", AccessTools.all),
@@ -49,7 +50,6 @@ namespace CleanPatches
       // just crashes the game
       //typeof(Screen).GetMethod("Select", AccessTools.all).Invoke(_, new object[] { });
 
-      // also crashes the game, but not in sub editor test
       // ---------------------- Screen.Select ----------------------
       Screen __ = (Screen)_; // guh
 
@@ -101,7 +101,7 @@ namespace CleanPatches
       MapEntity.ClearHighlightedEntities();
 
 #if RUN_PHYSICS_IN_SEPARATE_THREAD
-      var physicsThread = new Thread(_.ExecutePhysics)
+      var physicsThread = new Thread(() => _.ExecutePhysics())
       {
         Name = "Physics thread",
         IsBackground = true
@@ -150,20 +150,20 @@ namespace CleanPatches
         GameMain.LightManager?.Update((float)deltaTime);
 #endif
 
-        _.GameTime += deltaTime;
+      _.GameTime += deltaTime;
 
-        foreach (PhysicsBody body in PhysicsBody.List)
-        {
-          if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static) { body.Update(); }
-        }
-        MapEntity.ClearHighlightedEntities();
+      foreach (PhysicsBody body in PhysicsBody.List)
+      {
+        if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static) { body.Update(); }
+      }
+      MapEntity.ClearHighlightedEntities();
 
 #if CLIENT
         var sw = new System.Diagnostics.Stopwatch();
         sw.Start();
 #endif
 
-        GameMain.GameSession?.Update((float)deltaTime);
+      GameMain.GameSession?.Update((float)deltaTime);
 
 #if CLIENT
         sw.Stop();
@@ -214,7 +214,7 @@ namespace CleanPatches
         sw.Restart();
 #endif
 
-        StatusEffect.UpdateAll((float)deltaTime);
+      StatusEffect.UpdateAll((float)deltaTime);
 
 #if CLIENT
         sw.Stop();
@@ -249,18 +249,18 @@ namespace CleanPatches
         Character.Controlled?.UpdateLocalCursor(_.cam);
 #endif
 
-        foreach (Submarine sub in Submarine.Loaded)
-        {
-          sub.SetPrevTransform(sub.Position);
-        }
+      foreach (Submarine sub in Submarine.Loaded)
+      {
+        sub.SetPrevTransform(sub.Position);
+      }
 
-        foreach (PhysicsBody body in PhysicsBody.List)
+      foreach (PhysicsBody body in PhysicsBody.List)
+      {
+        if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static)
         {
-          if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static)
-          {
-            body.SetPrevTransform(body.SimPosition, body.Rotation);
-          }
+          body.SetPrevTransform(body.SimPosition, body.Rotation);
         }
+      }
 
 #if CLIENT
         MapEntity.UpdateAll((float)deltaTime, _.cam);
@@ -273,7 +273,7 @@ namespace CleanPatches
         GameMain.PerformanceCounter.AddElapsedTicks("Update:MapEntity", sw.ElapsedTicks);
         sw.Restart();
 #endif
-        Character.UpdateAnimAll((float)deltaTime);
+      Character.UpdateAnimAll((float)deltaTime);
 
 #if CLIENT
         Ragdoll.UpdateAll((float)deltaTime, _.cam);
@@ -287,10 +287,10 @@ namespace CleanPatches
         sw.Restart();
 #endif
 
-        foreach (Submarine sub in Submarine.Loaded)
-        {
-          sub.Update((float)deltaTime);
-        }
+      foreach (Submarine sub in Submarine.Loaded)
+      {
+        sub.Update((float)deltaTime);
+      }
 
 #if CLIENT
         sw.Stop();
@@ -317,8 +317,8 @@ namespace CleanPatches
         GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
         _.UpdateProjSpecific(deltaTime);
 #endif
-        // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
-        //_.UpdateProjSpecific(deltaTime);
+      // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
+      //_.UpdateProjSpecific(deltaTime);
 
 #if RUN_PHYSICS_IN_SEPARATE_THREAD
       }
