@@ -143,7 +143,9 @@ namespace CleanPatches
       {
         playSound = false;
       }
+#if CLIENT
       _.AddDamageProjSpecific(playSound, result);
+#endif
 
       float bleedingDamage = 0;
       if (_.character.CharacterHealth.DoesBleed)

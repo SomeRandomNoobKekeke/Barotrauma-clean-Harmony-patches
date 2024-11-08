@@ -83,8 +83,9 @@ namespace CleanPatches
           }
         }
       }
-
+#if CLIENT
       _.UpdateProjSpecific(deltaTime);
+#endif
 
       return false;
     }

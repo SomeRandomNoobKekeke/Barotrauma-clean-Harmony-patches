@@ -185,7 +185,7 @@ namespace CleanPatches
           if (Math.Abs(limb.LinearVelocity.Y) > 5.0f && limb.InWater != prevInWater && newHull == limb.Hull)
           {
 #if CLIENT
-      _.Splash(limb, newHull);
+          _.Splash(limb, newHull);
 #endif
 
             //if the Character dropped into water, create a wave
