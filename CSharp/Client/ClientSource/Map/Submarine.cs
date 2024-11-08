@@ -45,6 +45,11 @@ namespace CleanPatches
       );
 
       harmony.Patch(
+        original: typeof(Submarine).GetMethod("DrawDamageable", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawDamageable_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(Submarine).GetMethod("DrawPaintedColors", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Submarine_DrawPaintedColors_Replace"))
       );
@@ -178,6 +183,49 @@ namespace CleanPatches
         }
 
         e.Draw(spriteBatch, editing, true);
+      }
+
+      return false;
+    }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L165
+    public static bool Submarine_DrawDamageable_Replace(SpriteBatch spriteBatch, Effect damageEffect, bool editing = false, Predicate<MapEntity> predicate = null)
+    {
+      var entitiesToRender = !editing && Submarine.visibleEntities != null ? Submarine.visibleEntities : MapEntity.MapEntityList;
+
+      Submarine.depthSortedDamageable.Clear();
+
+      //insertion sort according to draw depth
+      foreach (MapEntity e in entitiesToRender)
+      {
+        if (e is Structure structure && structure.DrawDamageEffect)
+        {
+          if (predicate != null)
+          {
+            if (!predicate(e)) { continue; }
+          }
+          float drawDepth = structure.GetDrawDepth();
+          int i = 0;
+          while (i < Submarine.depthSortedDamageable.Count)
+          {
+            float otherDrawDepth = Submarine.depthSortedDamageable[i].GetDrawDepth();
+            if (otherDrawDepth < drawDepth) { break; }
+            i++;
+          }
+          Submarine.depthSortedDamageable.Insert(i, structure);
+        }
+      }
+
+      foreach (Structure s in Submarine.depthSortedDamageable)
+      {
+        s.DrawDamage(spriteBatch, damageEffect, editing);
+      }
+      if (damageEffect != null)
+      {
+        damageEffect.Parameters["aCutoff"].SetValue(0.0f);
+        damageEffect.Parameters["cCutoff"].SetValue(0.0f);
+        Submarine.DamageEffectCutoff = 0.0f;
       }
 
       return false;
