@@ -32,6 +32,11 @@ namespace CleanPatches
       );
 
       harmony.Patch(
+        original: typeof(LevelRenderer).GetMethod("DrawForeground", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("LevelRenderer_DrawForeground_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(LevelRenderer).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("LevelRenderer_Update_Replace"))
       );
@@ -214,6 +219,19 @@ namespace CleanPatches
           SamplerState.LinearClamp, DepthStencilState.DepthRead, null, null,
           cam.Transform);
       backgroundSpriteManager?.DrawObjectsMid(spriteBatch, cam);
+      spriteBatch.End();
+
+      return false;
+    }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelRenderer.cs#L341
+    public static bool LevelRenderer_DrawForeground_Replace(LevelRenderer __instance, SpriteBatch spriteBatch, Camera cam, LevelObjectManager backgroundSpriteManager = null)
+    {
+      spriteBatch.Begin(SpriteSortMode.Deferred,
+          BlendState.NonPremultiplied,
+          SamplerState.LinearClamp, DepthStencilState.DepthRead, null, null,
+          cam.Transform);
+      backgroundSpriteManager?.DrawObjectsFront(spriteBatch, cam);
       spriteBatch.End();
 
       return false;

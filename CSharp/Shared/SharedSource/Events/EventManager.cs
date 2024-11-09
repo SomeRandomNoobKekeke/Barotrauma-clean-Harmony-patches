@@ -76,7 +76,7 @@ namespace CleanPatches
         {
           DebugConsole.ThrowError("Could not select EventManager settings. Disabling EventManager for the round...");
 #if SERVER
-          GameMain.Server?.SendChatMessage("Could not select EventManager settings. Disabling EventManager for the round...", Networking.ChatMessageType.Error);
+          GameMain.Server?.SendChatMessage("Could not select EventManager settings. Disabling EventManager for the round...", Barotrauma.Networking.ChatMessageType.Error);
 #endif
           _.Enabled = false;
           return false;
