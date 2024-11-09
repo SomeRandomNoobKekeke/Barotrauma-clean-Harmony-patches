@@ -132,7 +132,7 @@ namespace CleanPatches
 
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L223
-    public static bool ParticleManager_Draw_Replace(SpriteBatch spriteBatch, bool inWater, bool? inSub, ParticleBlendState blendState, bool? background, ParticleManager __instance)
+    public static bool ParticleManager_Draw_Replace(SpriteBatch spriteBatch, bool inWater, bool? inSub, ParticleBlendState blendState, bool? background = false, ParticleManager __instance)
     {
       ParticleManager _ = __instance;
 
