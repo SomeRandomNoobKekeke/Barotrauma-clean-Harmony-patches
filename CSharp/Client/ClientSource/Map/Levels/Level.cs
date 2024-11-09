@@ -27,6 +27,13 @@ namespace CleanPatches
         original: typeof(Level).GetMethod("DrawBack", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Level_DrawBack_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Level).GetMethod("DrawFront", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Level_DrawFront_Replace"))
+      );
+
+
     }
 
 
@@ -51,5 +58,13 @@ namespace CleanPatches
 
       return false;
     }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs#L141
+    public static bool Level_DrawFront_Replace(SpriteBatch spriteBatch, Camera cam, Level __instance)
+    {
+      __instance.renderer?.DrawForeground(spriteBatch, cam, __instance.LevelObjectManager);
+      return false;
+    }
+
   }
 }
