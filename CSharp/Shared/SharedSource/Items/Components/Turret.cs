@@ -37,8 +37,6 @@ namespace CleanPatches
         original: typeof(Turret).GetMethod("UpdateAutoOperate", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Turret_UpdateAutoOperate_Replace"))
       );
-
-
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Turret.cs#L438

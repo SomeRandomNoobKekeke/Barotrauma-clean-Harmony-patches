@@ -123,6 +123,11 @@ namespace CleanPatches
       return false;
     }
 
+
+
+    // Note: it doesn't work in dll mods because of that base.Update(fixedTime);
+    // -> don't use it in dll mods
+
     //https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GameMain.cs#L692
     public static bool GameMain_Update_Replace(GameTime gameTime, GameMain __instance)
     {
