@@ -78,7 +78,7 @@ namespace CleanPatches
 
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L101
-    public static bool ParticleManager_CreateParticle_Replace(ParticlePrefab prefab, Vector2 position, Vector2 velocity, float rotation, Hull hullGuess, ParticleDrawOrder drawOrder, float collisionIgnoreTimer, float lifeTimeMultiplier, Tuple<Vector2, Vector2> tracerPoints, ParticleManager __instance, ref Particle __result)
+    public static bool ParticleManager_CreateParticle_Replace(ParticleManager __instance, ref Particle __result, ParticlePrefab prefab, Vector2 position, Vector2 velocity, float rotation = 0.0f, Hull hullGuess = null, ParticleDrawOrder drawOrder = ParticleDrawOrder.Default, float collisionIgnoreTimer = 0f, float lifeTimeMultiplier = 1f, Tuple<Vector2, Vector2> tracerPoints = null)
     {
       ParticleManager _ = __instance;
 
