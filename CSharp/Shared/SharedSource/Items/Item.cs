@@ -44,6 +44,11 @@ namespace CleanPatches
         original: typeof(Item).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Item_Update_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Item).GetMethod("Use", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Item_Use_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L2299
