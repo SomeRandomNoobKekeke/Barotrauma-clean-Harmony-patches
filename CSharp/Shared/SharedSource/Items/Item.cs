@@ -228,5 +228,50 @@ namespace CleanPatches
       return false;
     }
 
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L3233
+    public static bool Item_Use_Replace(Item __instance, float deltaTime, Character user = null, Limb targetLimb = null, Entity useTarget = null, Character userForOnUsedEvent = null)
+    {
+      Item _ = __instance;
+
+      if (_.RequireAimToUse && (user == null || !user.IsKeyDown(InputType.Aim)))
+      {
+        return false;
+      }
+
+      if (_.condition <= 0.0f) { return false; }
+
+      var should = GameMain.LuaCs.Hook.Call<bool?>("item.use", new object[] { _, user, targetLimb, useTarget });
+
+      if (should != null && should.Value) { return false; }
+
+      bool remove = false;
+
+      foreach (ItemComponent ic in _.components)
+      {
+        bool isControlled = false;
+#if CLIENT
+        isControlled = user == Character.Controlled;
+#endif
+        if (!ic.HasRequiredContainedItems(user, isControlled)) { continue; }
+        if (ic.Use(deltaTime, user))
+        {
+          ic.WasUsed = true;
+#if CLIENT
+          ic.PlaySound(ActionType.OnUse, user);
+#endif
+          ic.ApplyStatusEffects(ActionType.OnUse, deltaTime, user, targetLimb, useTarget: useTarget, user: user);
+          ic.OnUsed.Invoke(new ItemComponent.ItemUseInfo(_, user ?? userForOnUsedEvent));
+          if (ic.DeleteOnUse) { remove = true; }
+        }
+      }
+
+      if (remove)
+      {
+        Item.Spawner.AddItemToRemoveQueue(_);
+      }
+
+      return false;
+    }
   }
 }
