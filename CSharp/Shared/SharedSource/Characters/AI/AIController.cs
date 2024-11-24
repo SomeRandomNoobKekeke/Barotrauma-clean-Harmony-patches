@@ -26,10 +26,13 @@ namespace CleanPatches
     [ThisIsHowToPatchIt]
     public static void PatchSharedAIController()
     {
-      harmony.Patch(
-        original: typeof(AIController).GetMethod("Update", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("AIController_Update_Replace"))
-      );
+      // Use it either as a harmony patch or as a base call substitution
+      // But not both or it will cause ExecutionEngineException
+
+      // harmony.Patch(
+      //   original: typeof(AIController).GetMethod("Update", AccessTools.all),
+      //   prefix: new HarmonyMethod(typeof(Mod).GetMethod("AIController_Update_Replace"))
+      // );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AIController.cs#L160
