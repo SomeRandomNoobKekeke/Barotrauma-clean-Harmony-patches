@@ -30,6 +30,11 @@ namespace CleanPatches
         original: typeof(RepairTool).GetMethod("Use", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("RepairTool_Use_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(RepairTool).GetMethod("Repair", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("RepairTool_Repair_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L185
@@ -167,6 +172,235 @@ namespace CleanPatches
       __result = true; return false;
     }
 
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L321
+    public static bool RepairTool_Repair_Replace(RepairTool __instance, Vector2 rayStart, Vector2 rayEnd, float deltaTime, Character user, float degreeOfSuccess, List<Body> ignoredBodies)
+    {
+      RepairTool _ = __instance;
+
+      var collisionCategories = Physics.CollisionWall | Physics.CollisionItem | Physics.CollisionLevel | Physics.CollisionRepairableWall;
+      if (!_.IgnoreCharacters)
+      {
+        collisionCategories |= Physics.CollisionCharacter;
+      }
+
+      //if the item can cut off limbs, activate nearby bodies to allow the raycast to hit them
+      if (_.statusEffectLists != null)
+      {
+        static bool CanSeverJoints(ActionType type, Dictionary<ActionType, List<StatusEffect>> effectList) =>
+            effectList.TryGetValue(type, out List<StatusEffect> effects) && effects.Any(e => e.SeverLimbsProbability > 0);
+
+        if (CanSeverJoints(ActionType.OnUse, _.statusEffectLists) || CanSeverJoints(ActionType.OnSuccess, _.statusEffectLists))
+        {
+          float rangeSqr = ConvertUnits.ToSimUnits(_.Range);
+          rangeSqr *= rangeSqr;
+          foreach (Character c in Character.CharacterList)
+          {
+            if (!c.Enabled || !c.AnimController.BodyInRest) { continue; }
+            //do a broad check first
+            if (Math.Abs(c.WorldPosition.X - _.item.WorldPosition.X) > 1000.0f) { continue; }
+            if (Math.Abs(c.WorldPosition.Y - _.item.WorldPosition.Y) > 1000.0f) { continue; }
+            foreach (Limb limb in c.AnimController.Limbs)
+            {
+              if (Vector2.DistanceSquared(limb.SimPosition, _.item.SimPosition) < rangeSqr && Vector2.Dot(rayEnd - rayStart, limb.SimPosition - rayStart) > 0)
+              {
+                c.AnimController.BodyInRest = false;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      float lastPickedFraction = 0.0f;
+      if (_.RepairMultiple)
+      {
+        var bodies = Submarine.PickBodies(rayStart, rayEnd, ignoredBodies, collisionCategories,
+            ignoreSensors: false,
+            customPredicate: (Fixture f) =>
+            {
+              if (f.IsSensor)
+              {
+                if (_.RepairThroughHoles && f.Body?.UserData is Structure) { return false; }
+                if (f.Body?.UserData is PhysicsBody) { return false; }
+              }
+              if (f.Body?.UserData is Item it && it.GetComponent<Planter>() != null) { return false; }
+              if (f.Body?.UserData as string == "ruinroom") { return false; }
+              if (f.Body?.UserData is VineTile && !(_.FireDamage > 0)) { return false; }
+              return true;
+            },
+            allowInsideFixture: true);
+
+        RepairTool.hitBodies.Clear();
+        RepairTool.hitBodies.AddRange(bodies.Distinct());
+
+        lastPickedFraction = Submarine.LastPickedFraction;
+        Type lastHitType = null;
+        _.hitCharacters.Clear();
+        foreach (Body body in RepairTool.hitBodies)
+        {
+          Type bodyType = body.UserData?.GetType();
+          if (!_.RepairThroughWalls && bodyType != null && bodyType != lastHitType)
+          {
+            //stop the ray if it already hit a door/wall and is now about to hit some other type of entity
+            if (lastHitType == typeof(Item) || lastHitType == typeof(Structure)) { break; }
+          }
+          if (!_.RepairMultipleWalls && (bodyType == typeof(Structure) || (body.UserData as Item)?.GetComponent<Door>() != null)) { break; }
+
+          Character hitCharacter = null;
+          if (body.UserData is Limb limb)
+          {
+            hitCharacter = limb.character;
+          }
+          else if (body.UserData is Character character)
+          {
+            hitCharacter = character;
+          }
+          //only do damage once to each character even if they ray hit multiple limbs
+          if (hitCharacter != null)
+          {
+            if (_.hitCharacters.Contains(hitCharacter)) { continue; }
+            _.hitCharacters.Add(hitCharacter);
+          }
+
+          //if repairing through walls is not allowed and the next wall is more than 100 pixels away from the previous one, stop here
+          //(= repairing multiple overlapping walls is allowed as long as the edges of the walls are less than MaxOverlappingWallDist pixels apart)
+          float thisBodyFraction = Submarine.LastPickedBodyDist(body);
+          if (!_.RepairThroughWalls && lastHitType == typeof(Structure) && _.Range * (thisBodyFraction - lastPickedFraction) > _.MaxOverlappingWallDist)
+          {
+            break;
+          }
+          _.pickedPosition = rayStart + (rayEnd - rayStart) * thisBodyFraction;
+          if (_.FixBody(user, _.pickedPosition, deltaTime, degreeOfSuccess, body))
+          {
+            lastPickedFraction = thisBodyFraction;
+            if (bodyType != null) { lastHitType = bodyType; }
+          }
+        }
+      }
+      else
+      {
+        var pickedBody = Submarine.PickBody(rayStart, rayEnd,
+            ignoredBodies, collisionCategories,
+            ignoreSensors: false,
+            customPredicate: (Fixture f) =>
+            {
+              if (f.IsSensor)
+              {
+                if (_.RepairThroughHoles && f.Body?.UserData is Structure) { return false; }
+                if (f.Body?.UserData is PhysicsBody) { return false; }
+              }
+              if (f.Body?.UserData as string == "ruinroom") { return false; }
+              if (f.Body?.UserData is VineTile && !(_.FireDamage > 0)) { return false; }
+
+              if (f.Body?.UserData is Item targetItem)
+              {
+                if (!_.HitItems) { return false; }
+                if (_.HitBrokenDoors)
+                {
+                  if (targetItem.GetComponent<Door>() == null && targetItem.Condition <= 0) { return false; }
+                }
+                else
+                {
+                  if (targetItem.Condition <= 0) { return false; }
+                }
+              }
+              return f.Body?.UserData != null;
+            },
+            allowInsideFixture: true);
+        _.pickedPosition = Submarine.LastPickedPosition;
+        _.FixBody(user, _.pickedPosition, deltaTime, degreeOfSuccess, pickedBody);
+        lastPickedFraction = Submarine.LastPickedFraction;
+      }
+
+      if (_.ExtinguishAmount > 0.0f && _.item.CurrentHull != null)
+      {
+        _.fireSourcesInRange.Clear();
+        //step along the ray in 10% intervals, collecting all fire sources in the range
+        for (float x = 0.0f; x <= lastPickedFraction; x += 0.1f)
+        {
+          Vector2 displayPos = ConvertUnits.ToDisplayUnits(rayStart + (rayEnd - rayStart) * x);
+          if (_.item.CurrentHull.Submarine != null) { displayPos += _.item.CurrentHull.Submarine.Position; }
+
+          Hull hull = Hull.FindHull(displayPos, _.item.CurrentHull);
+          if (hull == null) continue;
+          foreach (FireSource fs in hull.FireSources)
+          {
+            if (fs.IsInDamageRange(displayPos, 100.0f) && !_.fireSourcesInRange.Contains(fs))
+            {
+              _.fireSourcesInRange.Add(fs);
+            }
+          }
+          foreach (FireSource fs in hull.FakeFireSources)
+          {
+            if (fs.IsInDamageRange(displayPos, 100.0f) && !_.fireSourcesInRange.Contains(fs))
+            {
+              _.fireSourcesInRange.Add(fs);
+            }
+          }
+        }
+
+        foreach (FireSource fs in _.fireSourcesInRange)
+        {
+          fs.Extinguish(deltaTime, _.ExtinguishAmount);
+#if SERVER
+          if (!(fs is DummyFireSource))
+          {
+            GameMain.Server.KarmaManager.OnExtinguishingFire(user, deltaTime);
+          }
+#endif
+        }
+      }
+
+      if (_.WaterAmount > 0.0f && _.item.Submarine != null)
+      {
+        Vector2 pos = ConvertUnits.ToDisplayUnits(rayStart + _.item.Submarine.SimPosition);
+
+        // Could probably be done much efficiently here
+        foreach (Item it in Item.ItemList)
+        {
+          if (it.Submarine == _.item.Submarine && it.GetComponent<Planter>() is { } planter)
+          {
+            if (it.GetComponent<Holdable>() is { } holdable && holdable.Attachable && !holdable.Attached) { continue; }
+
+            Rectangle collisionRect = it.WorldRect;
+            collisionRect.Y -= collisionRect.Height;
+            if (collisionRect.Left < pos.X && collisionRect.Right > pos.X && collisionRect.Bottom < pos.Y)
+            {
+              Body collision = Submarine.PickBody(rayStart, it.SimPosition, ignoredBodies, collisionCategories);
+              if (collision == null)
+              {
+                for (var i = 0; i < planter.GrowableSeeds.Length; i++)
+                {
+                  Growable seed = planter.GrowableSeeds[i];
+                  if (seed == null || seed.Decayed) { continue; }
+
+                  seed.Health += _.WaterAmount * deltaTime;
+
+#if CLIENT
+                  float barOffset = 10f * GUI.Scale;
+                  Vector2 offset = planter.PlantSlots.ContainsKey(i) ? planter.PlantSlots[i].Offset : Vector2.Zero;
+                  user?.UpdateHUDProgressBar(planter, planter.Item.DrawPosition + new Vector2(barOffset, 0) + offset, seed.Health / seed.MaxHealth, GUIStyle.Blue, GUIStyle.Blue, "progressbar.watering");
+#endif
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (GameMain.NetworkMember == null || GameMain.NetworkMember.IsServer)
+      {
+        if (Rand.Range(0.0f, 1.0f) < _.FireProbability * deltaTime && _.item.CurrentHull != null)
+        {
+          Vector2 displayPos = ConvertUnits.ToDisplayUnits(rayStart + (rayEnd - rayStart) * lastPickedFraction * 0.9f);
+          if (_.item.CurrentHull.Submarine != null) { displayPos += _.item.CurrentHull.Submarine.Position; }
+          new FireSource(displayPos, sourceCharacter: user);
+        }
+      }
+
+      return false;
+    }
 
   }
 }
