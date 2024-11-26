@@ -49,6 +49,14 @@ namespace CleanPatches
         original: typeof(Item).GetMethod("Use", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Item_Use_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Item).GetMethod("SendSignal", AccessTools.all, new Type[]{
+          typeof(Signal),
+          typeof(Connection),
+        }),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Item_SendSignal_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L2299
@@ -278,5 +286,70 @@ namespace CleanPatches
 
       return false;
     }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L2946
+    public static bool Item_SendSignal_Replace(Signal signal, Connection connection, Item __instance)
+    {
+      Item _ = __instance;
+
+      _.LastSentSignalRecipients.Clear();
+      if (_.connections == null || connection == null) { return false; }
+
+      signal.stepsTaken++;
+
+      //if the signal has been passed through this item multiple times already, interrupt it to prevent infinite loops
+      if (signal.stepsTaken > 5 && signal.source != null)
+      {
+        int duplicateRecipients = 0;
+        foreach (var recipient in signal.source.LastSentSignalRecipients)
+        {
+          if (recipient == connection)
+          {
+            duplicateRecipients++;
+            if (duplicateRecipients > 2) { return false; }
+          }
+        }
+      }
+
+      //use a coroutine to prevent infinite loops by creating a one 
+      //frame delay if the "signal chain" gets too long
+      if (signal.stepsTaken > 10)
+      {
+        //if there's an equal signal waiting to be sent
+        //to the same connection, don't add a new one
+        signal.stepsTaken = 0;
+        bool duplicateFound = false;
+        foreach (var s in _.delayedSignals)
+        {
+          if (s.Connection == connection && s.Signal.source == signal.source && s.Signal.value == signal.value && s.Signal.sender == signal.sender)
+          {
+            duplicateFound = true;
+            break;
+          }
+        }
+        if (!duplicateFound)
+        {
+          _.delayedSignals.Add((signal, connection));
+          CoroutineManager.StartCoroutine(_.DelaySignal(signal, connection));
+        }
+      }
+      else
+      {
+        if (connection.Effects != null && signal.value != "0" && !string.IsNullOrEmpty(signal.value))
+        {
+          foreach (StatusEffect effect in connection.Effects)
+          {
+            if (_.condition <= 0.0f && effect.type != ActionType.OnBroken) { continue; }
+            _.ApplyStatusEffect(effect, ActionType.OnUse, (float)Timing.Step);
+          }
+        }
+        signal.source ??= _;
+        connection.SendSignal(signal);
+      }
+
+      return false;
+    }
+
+
   }
 }
