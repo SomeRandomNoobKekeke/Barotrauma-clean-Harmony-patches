@@ -29,6 +29,11 @@ namespace CleanPatches
         original: typeof(Controller).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Controller_Update_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Controller).GetMethod("Use", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Controller_Use_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Controller.cs#L223
@@ -184,6 +189,43 @@ namespace CleanPatches
       return false;
     }
 
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Controller.cs#L373
+    public static bool Controller_Use_Replace(Controller __instance, ref bool __result, float deltaTime, Character activator = null)
+    {
+      Controller _ = __instance;
+
+      if (activator != _.user)
+      {
+        __result = false; return false;
+      }
+      if (_.user == null || _.user.Removed || !_.user.IsAnySelectedItem(_.item) || !_.user.CanInteractWith(_.item))
+      {
+        _.user = null;
+        __result = false; return false;
+      }
+
+      if (_.IsOutOfPower()) { __result = false; return false; }
+
+      if (_.IsToggle && (activator == null || _.lastUsed < Timing.TotalTime - 0.1))
+      {
+        if (GameMain.NetworkMember == null || GameMain.NetworkMember.IsServer)
+        {
+          _.State = !_.State;
+#if SERVER
+          _.item.CreateServerEvent(_);
+#endif
+        }
+      }
+      else if (!string.IsNullOrEmpty(_.output))
+      {
+        _.item.SendSignal(new Signal(_.output, sender: _.user), "trigger_out");
+      }
+
+      _.lastUsed = Timing.TotalTime;
+      _.ApplyStatusEffects(ActionType.OnUse, 1.0f, activator);
+
+      __result = true; return false;
+    }
 
   }
 }
