@@ -31,6 +31,11 @@ namespace CleanPatches
         original: typeof(Radiation).GetMethod("OnStep", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_OnStep_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Radiation).GetMethod("UpdateRadiation", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_UpdateRadiation_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Radiation.cs#L49
@@ -81,6 +86,48 @@ namespace CleanPatches
 
       return false;
     }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Radiation.cs#L101
+    public static bool Radiation_UpdateRadiation_Replace(Radiation __instance, float deltaTime)
+    {
+      Radiation _ = __instance;
+
+      if (!(GameMain.GameSession?.IsCurrentLocationRadiated() ?? false)) { return false; }
+
+      if (GameMain.NetworkMember is { IsClient: true }) { return false; }
+
+      if (_.radiationTimer > 0)
+      {
+        _.radiationTimer -= deltaTime;
+        return false;
+      }
+
+      if (_.radiationAffliction == null)
+      {
+        float radiationStrengthChange = AfflictionPrefab.RadiationSickness.Effects.FirstOrDefault()?.StrengthChange ?? 0.0f;
+        _.radiationAffliction = new Affliction(
+            AfflictionPrefab.RadiationSickness,
+            (_.Params.RadiationDamageAmount - radiationStrengthChange) * _.Params.RadiationDamageDelay);
+      }
+
+      _.radiationTimer = _.Params.RadiationDamageDelay;
+
+      foreach (Character character in Character.CharacterList)
+      {
+        if (character.IsDead || character.Removed || !(character.CharacterHealth is { } health)) { continue; }
+
+        if (_.IsEntityRadiated(character))
+        {
+          var limb = character.AnimController.MainLimb;
+          AttackResult attackResult = limb.AddDamage(limb.SimPosition, _.radiationAffliction.ToEnumerable(), playSound: false);
+          character.CharacterHealth.ApplyDamage(limb, attackResult);
+        }
+      }
+
+      return false;
+    }
+
 
   }
 }
