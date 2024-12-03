@@ -103,6 +103,7 @@ namespace CleanPatches
     }
 
 
+    //TODO i didn't test it in multiplayer
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Structure.cs#L1171
     public static bool Structure_SetDamage_Replace(Structure __instance, int sectionIndex, float damage, Character attacker = null,
               bool createNetworkEvent = true,
