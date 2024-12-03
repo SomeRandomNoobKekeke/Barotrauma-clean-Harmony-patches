@@ -35,6 +35,11 @@ namespace CleanPatches
         original: typeof(RepairTool).GetMethod("Repair", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("RepairTool_Repair_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(RepairTool).GetMethod("FixBody", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("RepairTool_FixBody_Replace"))
+      );
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L185
@@ -400,6 +405,187 @@ namespace CleanPatches
       }
 
       return false;
+    }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L545
+    public static bool RepairTool_FixBody_Replace(RepairTool __instance, ref bool __result, Character user, Vector2 hitPosition, float deltaTime, float degreeOfSuccess, Body targetBody)
+    {
+      RepairTool _ = __instance;
+
+      if (targetBody?.UserData == null) { __result = false; return false; }
+
+      if (targetBody.UserData is Structure targetStructure)
+      {
+        if (targetStructure.IsPlatform) { __result = false; return false; }
+        int sectionIndex = targetStructure.FindSectionIndex(ConvertUnits.ToDisplayUnits(_.pickedPosition));
+        if (sectionIndex < 0) { __result = false; return false; }
+
+        if (!_.fixableEntities.Contains("structure") && !_.fixableEntities.Contains(targetStructure.Prefab.Identifier)) { __result = true; return false; }
+        if (_.nonFixableEntities.Contains(targetStructure.Prefab.Identifier) || _.nonFixableEntities.Any(t => targetStructure.Tags.Contains(t))) { __result = false; return false; }
+
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, structure: targetStructure);
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, structure: targetStructure);
+        _.FixStructureProjSpecific(user, deltaTime, targetStructure, sectionIndex);
+
+        float structureFixAmount = _.StructureFixAmount;
+        if (structureFixAmount >= 0f)
+        {
+          structureFixAmount *= 1 + user.GetStatValue(StatTypes.RepairToolStructureRepairMultiplier);
+          structureFixAmount *= 1 + _.item.GetQualityModifier(Quality.StatType.RepairToolStructureRepairMultiplier);
+        }
+        else
+        {
+          structureFixAmount *= 1 + user.GetStatValue(StatTypes.RepairToolStructureDamageMultiplier);
+          structureFixAmount *= 1 + _.item.GetQualityModifier(Quality.StatType.RepairToolStructureDamageMultiplier);
+        }
+
+        var didLeak = targetStructure.SectionIsLeakingFromOutside(sectionIndex);
+
+        targetStructure.AddDamage(sectionIndex, -structureFixAmount * degreeOfSuccess, user);
+
+        if (didLeak && !targetStructure.SectionIsLeakingFromOutside(sectionIndex))
+        {
+          user.CheckTalents(AbilityEffectType.OnRepairedOutsideLeak);
+        }
+
+        //if the next section is small enough, apply the effect to it as well
+        //(to make it easier to fix a small "left-over" section)
+        for (int i = -1; i < 2; i += 2)
+        {
+          int nextSectionLength = targetStructure.SectionLength(sectionIndex + i);
+          if ((sectionIndex == 1 && i == -1) ||
+              (sectionIndex == targetStructure.SectionCount - 2 && i == 1) ||
+              (nextSectionLength > 0 && nextSectionLength < Structure.WallSectionSize * 0.3f))
+          {
+            //targetStructure.HighLightSection(sectionIndex + i);
+            targetStructure.AddDamage(sectionIndex + i, -structureFixAmount * degreeOfSuccess);
+          }
+        }
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is Voronoi2.VoronoiCell cell && cell.IsDestructible)
+      {
+        if (Level.Loaded?.ExtraWalls.Find(w => w.Body == cell.Body) is DestructibleLevelWall levelWall)
+        {
+          levelWall.AddDamage(-_.LevelWallFixAmount * deltaTime, ConvertUnits.ToDisplayUnits(hitPosition));
+        }
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is LevelObject levelObject && levelObject.Prefab.TakeLevelWallDamage)
+      {
+        levelObject.AddDamage(-_.LevelWallFixAmount, deltaTime, _.item);
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is Character targetCharacter)
+      {
+        if (targetCharacter.Removed) { __result = false; return false; }
+        targetCharacter.LastDamageSource = _.item;
+        Limb closestLimb = null;
+        float closestDist = float.MaxValue;
+        foreach (Limb limb in targetCharacter.AnimController.Limbs)
+        {
+          if (limb.Removed || limb.IgnoreCollisions || limb.Hidden || limb.IsSevered) { continue; }
+          float dist = Vector2.DistanceSquared(_.item.SimPosition, limb.SimPosition);
+          if (dist < closestDist)
+          {
+            closestLimb = limb;
+            closestDist = dist;
+          }
+        }
+
+        if (closestLimb != null && !MathUtils.NearlyEqual(_.TargetForce, 0.0f))
+        {
+          Vector2 dir = closestLimb.WorldPosition - _.item.WorldPosition;
+          dir = dir.LengthSquared() < 0.0001f ? Vector2.UnitY : Vector2.Normalize(dir);
+          closestLimb.body.ApplyForce(dir * _.TargetForce, maxVelocity: 10.0f);
+        }
+
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, character: targetCharacter, limb: closestLimb);
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, character: targetCharacter, limb: closestLimb);
+        _.FixCharacterProjSpecific(user, deltaTime, targetCharacter);
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is Limb targetLimb)
+      {
+        if (targetLimb.character == null || targetLimb.character.Removed) { __result = false; return false; }
+
+        if (!MathUtils.NearlyEqual(_.TargetForce, 0.0f))
+        {
+          Vector2 dir = targetLimb.WorldPosition - _.item.WorldPosition;
+          dir = dir.LengthSquared() < 0.0001f ? Vector2.UnitY : Vector2.Normalize(dir);
+          targetLimb.body.ApplyForce(dir * _.TargetForce, maxVelocity: 10.0f);
+        }
+
+        targetLimb.character.LastDamageSource = _.item;
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, character: targetLimb.character, limb: targetLimb);
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, character: targetLimb.character, limb: targetLimb);
+        _.FixCharacterProjSpecific(user, deltaTime, targetLimb.character);
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is Item targetItem)
+      {
+        if (!_.HitItems || !targetItem.IsInteractable(user)) { __result = false; return false; }
+
+        var levelResource = targetItem.GetComponent<LevelResource>();
+        if (levelResource != null && levelResource.Attached &&
+            levelResource.RequiredItems.Any() &&
+            levelResource.HasRequiredItems(user, addMessage: false))
+        {
+          float addedDetachTime = deltaTime *
+              _.DeattachSpeed *
+              (1f + user.GetStatValue(StatTypes.RepairToolDeattachTimeMultiplier)) *
+              (1f + _.item.GetQualityModifier(Quality.StatType.RepairToolDeattachTimeMultiplier));
+          levelResource.DeattachTimer += addedDetachTime;
+#if CLIENT
+          if (targetItem.Prefab.ShowHealthBar && Character.Controlled != null &&
+              (user == Character.Controlled || Character.Controlled.CanSeeTarget(_.item)))
+          {
+              Character.Controlled.UpdateHUDProgressBar(
+                  _,
+                  targetItem.WorldPosition,
+                  levelResource.DeattachTimer / levelResource.DeattachDuration,
+                  GUIStyle.Red, GUIStyle.Green, "progressbar.deattaching");
+          }
+#endif
+          _.FixItemProjSpecific(user, deltaTime, targetItem, showProgressBar: false);
+          __result = true; return false;
+        }
+
+        if (!targetItem.Prefab.DamagedByRepairTools) { __result = false; return false; }
+
+        if (_.HitBrokenDoors)
+        {
+          if (targetItem.GetComponent<Door>() == null && targetItem.Condition <= 0) { __result = false; return false; }
+        }
+        else
+        {
+          if (targetItem.Condition <= 0) { __result = false; return false; }
+        }
+
+        targetItem.IsHighlighted = true;
+
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, targetItem);
+        _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, targetItem);
+
+        if (targetItem.body != null && !MathUtils.NearlyEqual(_.TargetForce, 0.0f))
+        {
+          Vector2 dir = targetItem.WorldPosition - _.item.WorldPosition;
+          dir = dir.LengthSquared() < 0.0001f ? Vector2.UnitY : Vector2.Normalize(dir);
+          targetItem.body.ApplyForce(dir * _.TargetForce, maxVelocity: 10.0f);
+        }
+
+        _.FixItemProjSpecific(user, deltaTime, targetItem, showProgressBar: true);
+        __result = true; return false;
+      }
+      else if (targetBody.UserData is BallastFloraBranch branch)
+      {
+        if (branch.ParentBallastFlora is { } ballastFlora)
+        {
+          ballastFlora.DamageBranch(branch, _.FireDamage * deltaTime, BallastFloraBehavior.AttackType.Fire, user);
+        }
+      }
+      __result = false; return false;
     }
 
   }
