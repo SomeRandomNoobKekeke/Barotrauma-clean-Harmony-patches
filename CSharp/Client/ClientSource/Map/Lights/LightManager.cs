@@ -49,7 +49,7 @@ namespace CleanPatches
       LightManager _ = __instance;
 
       if ((!_.LosEnabled || _.LosMode == LosMode.None) && _.ObstructVisionAmount <= 0.0f) { return false; }
-      if (LightManager.ViewTarget == null) return false;
+      if (LightManager.ViewTarget == null) { return false; }
 
       graphics.SetRenderTarget(_.LosTexture);
 
@@ -132,11 +132,11 @@ namespace CleanPatches
 
         if (convexHulls != null)
         {
-          List<VertexPositionColor> shadowVerts = new List<VertexPositionColor>();
-          List<VertexPositionTexture> penumbraVerts = new List<VertexPositionTexture>();
+          LightManager.ShadowVertices.Clear();
+          LightManager.PenumbraVertices.Clear();
           foreach (ConvexHull convexHull in convexHulls)
           {
-            if (!convexHull.Enabled || !convexHull.Intersects(camView)) { continue; }
+            if (!convexHull.Intersects(camView)) { continue; }
 
             Vector2 relativeViewPos = pos;
             if (convexHull.ParentEntity?.Submarine != null)
@@ -148,31 +148,32 @@ namespace CleanPatches
 
             for (int i = 0; i < convexHull.ShadowVertexCount; i++)
             {
-              shadowVerts.Add(convexHull.ShadowVertices[i]);
+              LightManager.ShadowVertices.Add(convexHull.ShadowVertices[i]);
             }
 
             for (int i = 0; i < convexHull.PenumbraVertexCount; i++)
             {
-              penumbraVerts.Add(convexHull.PenumbraVertices[i]);
+              LightManager.PenumbraVertices.Add(convexHull.PenumbraVertices[i]);
             }
           }
 
-          if (shadowVerts.Count > 0)
+          if (LightManager.ShadowVertices.Count > 0)
           {
             ConvexHull.shadowEffect.World = shadowTransform;
             ConvexHull.shadowEffect.CurrentTechnique.Passes[0].Apply();
-            graphics.DrawUserPrimitives(PrimitiveType.TriangleList, shadowVerts.ToArray(), 0, shadowVerts.Count / 3, VertexPositionColor.VertexDeclaration);
+            graphics.DrawUserPrimitives(PrimitiveType.TriangleList, LightManager.ShadowVertices.ToArray(), 0, LightManager.ShadowVertices.Count / 3, VertexPositionColor.VertexDeclaration);
 
-            if (penumbraVerts.Count > 0)
+            if (LightManager.PenumbraVertices.Count > 0)
             {
               ConvexHull.penumbraEffect.World = shadowTransform;
               ConvexHull.penumbraEffect.CurrentTechnique.Passes[0].Apply();
-              graphics.DrawUserPrimitives(PrimitiveType.TriangleList, penumbraVerts.ToArray(), 0, penumbraVerts.Count / 3, VertexPositionTexture.VertexDeclaration);
+              graphics.DrawUserPrimitives(PrimitiveType.TriangleList, LightManager.PenumbraVertices.ToArray(), 0, LightManager.PenumbraVertices.Count / 3, VertexPositionTexture.VertexDeclaration);
             }
           }
         }
       }
       graphics.SetRenderTarget(null);
+
 
       return false;
     }
@@ -353,11 +354,21 @@ namespace CleanPatches
       }
       spriteBatch.End();
 
-      GameMain.GameScreen.DamageEffect.CurrentTechnique = GameMain.GameScreen.DamageEffect.Techniques["StencilShaderSolidColor"];
-      GameMain.GameScreen.DamageEffect.Parameters["solidColor"].SetValue(Color.Black.ToVector4());
-      spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.LinearWrap, transformMatrix: spriteBatchTransform, effect: GameMain.GameScreen.DamageEffect);
-      Submarine.DrawDamageable(spriteBatch, GameMain.GameScreen.DamageEffect);
-      spriteBatch.End();
+      if (backgroundObstructor != null)
+      {
+        spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.LinearWrap, transformMatrix: Matrix.Identity, effect: GameMain.GameScreen.DamageEffect);
+        spriteBatch.Draw(backgroundObstructor, new Rectangle(0, 0,
+            (int)(GameMain.GraphicsWidth * _.currLightMapScale), (int)(GameMain.GraphicsHeight * _.currLightMapScale)), Color.Black);
+        spriteBatch.End();
+      }
+      else
+      {
+        GameMain.GameScreen.DamageEffect.CurrentTechnique = GameMain.GameScreen.DamageEffect.Techniques["StencilShaderSolidColor"];
+        GameMain.GameScreen.DamageEffect.Parameters["solidColor"].SetValue(Color.Black.ToVector4());
+        spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.LinearWrap, transformMatrix: spriteBatchTransform, effect: GameMain.GameScreen.DamageEffect);
+        Submarine.DrawDamageable(spriteBatch, GameMain.GameScreen.DamageEffect);
+        spriteBatch.End();
+      }
 
       graphics.BlendState = BlendState.Additive;
 

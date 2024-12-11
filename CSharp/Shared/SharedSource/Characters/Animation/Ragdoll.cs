@@ -92,6 +92,11 @@ namespace CleanPatches
         }
       }
 
+      float MaxVel = NetConfig.MaxPhysicsBodyVelocity;
+      _.Collider.LinearVelocity = new Vector2(
+          NetConfig.Quantize(_.Collider.LinearVelocity.X, -MaxVel, MaxVel, 12),
+          NetConfig.Quantize(_.Collider.LinearVelocity.Y, -MaxVel, MaxVel, 12));
+
       if (_.forceStanding)
       {
         _.inWater = false;
@@ -239,7 +244,7 @@ namespace CleanPatches
         else
         {
           // Falling -> ragdoll briefly if we are not moving at all, because we are probably stuck.
-          if (_.Collider.LinearVelocity == Vector2.Zero)
+          if (_.Collider.LinearVelocity == Vector2.Zero && !_.character.IsRemotePlayer)
           {
             _.character.IsRagdolled = true;
             if (_.character.IsBot)

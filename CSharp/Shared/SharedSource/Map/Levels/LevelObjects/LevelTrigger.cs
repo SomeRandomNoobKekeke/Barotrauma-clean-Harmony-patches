@@ -105,6 +105,21 @@ namespace CleanPatches
         return false;
       }
 
+      if (PhysicsBody != null)
+      {
+        if (currentForceFluctuation <= 0.0f && statusEffects.None() && attacks.None())
+        {
+          //no force atm, and no status effects or attacks the trigger could apply
+          //    -> we can disable the collider and get a minor physics performance improvement
+          PhysicsBody.Enabled = false;
+          return;
+        }
+        else
+        {
+          PhysicsBody.Enabled = true;
+        }
+      }
+
       foreach (Entity triggerer in _.triggerers)
       {
         if (triggerer.Removed) { continue; }

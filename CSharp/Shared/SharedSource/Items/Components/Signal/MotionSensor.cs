@@ -113,10 +113,7 @@ namespace CleanPatches
         }
       }
 
-      bool triggerFromHumans = _.Target.HasFlag(MotionSensor.TargetType.Human);
-      bool triggerFromPets = _.Target.HasFlag(MotionSensor.TargetType.Pet);
-      bool triggerFromMonsters = _.Target.HasFlag(MotionSensor.TargetType.Monster);
-      bool hasTriggers = triggerFromHumans || triggerFromPets || triggerFromMonsters;
+      bool hasTriggers = _.triggerFromHumans || _.triggerFromPets || _.triggerFromMonsters;
       if (!hasTriggers) { return false; }
       foreach (Character character in Character.CharacterList)
       {

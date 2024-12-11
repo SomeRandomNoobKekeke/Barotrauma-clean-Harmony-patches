@@ -142,7 +142,7 @@ namespace CleanPatches
         foreach (Submarine sub in Submarine.Loaded)
         {
           Rectangle worldBorders = sub.Borders;
-          worldBorders.Location += sub.WorldPosition.ToPoint();
+          worldBorders.Location += (sub.DrawPosition + sub.HiddenSubPosition).ToPoint();
           worldBorders.Y = -worldBorders.Y;
 
           GUI.DrawRectangle(spriteBatch, worldBorders, Color.White, false, 0, 5);
@@ -192,35 +192,36 @@ namespace CleanPatches
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L165
     public static bool Submarine_DrawDamageable_Replace(SpriteBatch spriteBatch, Effect damageEffect, bool editing = false, Predicate<MapEntity> predicate = null)
     {
-      var entitiesToRender = !editing && Submarine.visibleEntities != null ? Submarine.visibleEntities : MapEntity.MapEntityList;
-
-      Submarine.depthSortedDamageable.Clear();
-
-      //insertion sort according to draw depth
-      foreach (MapEntity e in entitiesToRender)
+      if (!editing && Submarine.visibleEntities != null)
       {
-        if (e is Structure structure && structure.DrawDamageEffect)
+        foreach (MapEntity e in Submarine.visibleEntities)
         {
-          if (predicate != null)
+          if (e is Structure structure && structure.DrawDamageEffect)
           {
-            if (!predicate(e)) { continue; }
+            if (predicate != null)
+            {
+              if (!predicate(structure)) { continue; }
+            }
+            structure.DrawDamage(spriteBatch, damageEffect, editing);
           }
-          float drawDepth = structure.GetDrawDepth();
-          int i = 0;
-          while (i < Submarine.depthSortedDamageable.Count)
+        }
+      }
+      else
+      {
+        foreach (Structure structure in Structure.WallList)
+        {
+          if (structure.DrawDamageEffect)
           {
-            float otherDrawDepth = Submarine.depthSortedDamageable[i].GetDrawDepth();
-            if (otherDrawDepth < drawDepth) { break; }
-            i++;
+            if (predicate != null)
+            {
+              if (!predicate(structure)) { continue; }
+            }
+            structure.DrawDamage(spriteBatch, damageEffect, editing);
           }
-          Submarine.depthSortedDamageable.Insert(i, structure);
         }
       }
 
-      foreach (Structure s in Submarine.depthSortedDamageable)
-      {
-        s.DrawDamage(spriteBatch, damageEffect, editing);
-      }
+
       if (damageEffect != null)
       {
         damageEffect.Parameters["aCutoff"].SetValue(0.0f);

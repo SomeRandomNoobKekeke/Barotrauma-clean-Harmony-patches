@@ -56,14 +56,15 @@ namespace CleanPatches
         _.user.SelectedItem = _.item;
       }
       _.forceSelectNextFrame = false;
+      _.userCanInteractCheckTimer -= deltaTime;
 
       if (_.user == null
           || _.user.Removed
           || !_.user.IsAnySelectedItem(_.item)
           || (_.item.ParentInventory != null && !_.IsAttachedUser(_.user))
-          || !_.user.CanInteractWith(_.item)
           || (_.UsableIn == Controller.UseEnvironment.Water && !_.user.AnimController.InWater)
-          || (_.UsableIn == Controller.UseEnvironment.Air && _.user.AnimController.InWater))
+          || (_.UsableIn == Controller.UseEnvironment.Air && _.user.AnimController.InWater)
+          || !_.CheckUserCanInteract())
       {
         if (_.user != null)
         {

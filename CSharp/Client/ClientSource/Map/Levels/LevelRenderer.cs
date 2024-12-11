@@ -83,7 +83,7 @@ namespace CleanPatches
       //calculate the sum of the forces of nearby level triggers
       //and use it to move the water texture and water distortion effect
       Vector2 currentWaterParticleVel = _.level.GenerationParams.WaterParticleVelocity;
-      foreach (LevelObject levelObject in _.level.LevelObjectManager.GetVisibleObjects())
+      foreach (LevelObject levelObject in _.level.LevelObjectManager.GetAllVisibleObjects())
       {
         if (levelObject.Triggers == null) { continue; }
         //use the largest water flow velocity of all the triggers

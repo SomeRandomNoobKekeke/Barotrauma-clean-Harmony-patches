@@ -271,7 +271,7 @@ namespace CleanPatches
       }
       if (_.TargetItems)
       {
-        foreach (Item targetItem in Item.ItemList)
+        foreach (Item targetItem in Item.TurretTargetItems)
         {
           if (!Turret.IsValidTarget(targetItem)) { continue; }
           float priority = _.isSlowTurret ? targetItem.Prefab.AISlowTurretPriority : targetItem.Prefab.AITurretPriority;
