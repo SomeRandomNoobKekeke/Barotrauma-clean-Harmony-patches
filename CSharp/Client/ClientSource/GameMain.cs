@@ -171,7 +171,7 @@ namespace CleanPatches
         _.fixedTime.IsRunningSlowly = gameTime.IsRunningSlowly;
         TimeSpan addTime = new TimeSpan(0, 0, 0, 0, 16);
         _.fixedTime.ElapsedGameTime = addTime;
-        _.fixedTime.TotalGameTime.Add(addTime);
+        _.fixedTime.TotalGameTime = _.fixedTime.TotalGameTime.Add(addTime);
 
         //  instead of base.Update(fixedTime);
         try
@@ -264,16 +264,25 @@ namespace CleanPatches
             }
             GameMain.MainMenuScreen.Select();
 
+            string clientNameString = _.clientName ?? MultiplayerPreferences.Instance.PlayerName.FallbackNullOrEmpty(SteamManager.GetUsername());
+
             if (connectCommand.SteamLobbyIdOption.TryUnwrap(out var lobbyId))
             {
               SteamManager.JoinLobby(lobbyId.Value, joinServer: true);
             }
-            else if (connectCommand.NameAndP2PEndpointsOption.TryUnwrap(out var nameAndEndpoint)
-                     && nameAndEndpoint is { ServerName: var serverName, Endpoints: var endpoints })
+            else if ((connectCommand.NameAndP2PEndpointsOption.TryUnwrap(out var nameAndEndpoint) && nameAndEndpoint is { ServerName: var serverName, Endpoints: var endpoints }))
             {
-              GameMain.Client = new GameClient(MultiplayerPreferences.Instance.PlayerName.FallbackNullOrEmpty(SteamManager.GetUsername()),
+              GameMain.Client = new GameClient(clientNameString,
                   endpoints.Cast<Endpoint>().ToImmutableArray(),
                   string.IsNullOrWhiteSpace(serverName) ? endpoints.First().StringRepresentation : serverName,
+                  Option<int>.None());
+            }
+            else if ((connectCommand.NameAndLidgrenEndpointOption.TryUnwrap(out var nameAndLidgrenEndpoint) && nameAndLidgrenEndpoint is { ServerName: var lidgrenServerName, Endpoint: var endpoint }))
+            {
+              GameMain.Client = new GameClient(
+                  clientNameString,
+                  endpoint,
+                  string.IsNullOrWhiteSpace(lidgrenServerName) ? endpoint.StringRepresentation : lidgrenServerName,
                   Option<int>.None());
             }
 

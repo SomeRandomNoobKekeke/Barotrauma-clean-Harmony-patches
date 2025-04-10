@@ -76,14 +76,6 @@ namespace CleanPatches
         {
           createdCharacter.EvaluatePlayDeadProbability(_.overridePlayDeadProbability);
         }
-        if (GameMain.GameSession.IsCurrentLocationRadiated())
-        {
-          AfflictionPrefab radiationPrefab = AfflictionPrefab.RadiationSickness;
-          Affliction affliction = new Affliction(radiationPrefab, radiationPrefab.MaxStrength);
-          createdCharacter?.CharacterHealth.ApplyAffliction(null, affliction);
-          // TODO test multiplayer | that's not my TODO :D
-          createdCharacter?.Kill(CauseOfDeathType.Affliction, affliction, log: false);
-        }
         createdCharacter.DisabledByEvent = true;
         _.monsters.Add(createdCharacter);
       }

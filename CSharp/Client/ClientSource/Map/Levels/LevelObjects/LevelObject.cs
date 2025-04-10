@@ -36,7 +36,7 @@ namespace CleanPatches
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObject.cs#L170
-    public static bool LevelObject_Update_Replace(float deltaTime, LevelObject __instance)
+    public static bool LevelObject_Update_Replace(LevelObject __instance, float deltaTime, Camera cam)
     {
       LevelObject _ = __instance;
 
@@ -70,11 +70,17 @@ namespace CleanPatches
 
       if (_.LightSources != null)
       {
+        Vector2 position2D = new Vector2(_.Position.X, _.Position.Y);
+        Vector2 camDiff = position2D - cam.WorldViewCenter;
         for (int i = 0; i < _.LightSources.Length; i++)
         {
-          if (_.LightSourceTriggers[i] != null) _.LightSources[i].Enabled = _.LightSourceTriggers[i].IsTriggered;
+          if (_.LightSourceTriggers[i] != null)
+          {
+            _.LightSources[i].Enabled = _.LightSourceTriggers[i].IsTriggered;
+          }
           _.LightSources[i].Rotation = -_.CurrentRotation;
           _.LightSources[i].SpriteScale = _.CurrentScale;
+          _.LightSources[i].Position = position2D - camDiff * _.Position.Z * LevelObjectManager.ParallaxStrength;
         }
       }
 
@@ -108,7 +114,10 @@ namespace CleanPatches
             {
               _.SoundChannels[i] = roundSound.Sound.Play(roundSound.Volume, roundSound.Range, roundSound.GetRandomFrequencyMultiplier(), soundPos);
             }
-            _.SoundChannels[i].Position = new Vector3(soundPos.X, soundPos.Y, 0.0f);
+            if (_.SoundChannels[i] != null)
+            {
+              _.SoundChannels[i].Position = new Vector3(soundPos.X, soundPos.Y, 0.0f);
+            }
           }
         }
         else if (_.SoundChannels[i] != null && _.SoundChannels[i].IsPlaying)

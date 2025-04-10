@@ -44,7 +44,7 @@ namespace CleanPatches
     {
       Level _ = __instance;
 
-      _.LevelObjectManager.Update(deltaTime);
+      _.LevelObjectManager.Update(deltaTime, cam);
 
       foreach (LevelWall wall in _.ExtraWalls) { wall.Update(deltaTime); }
       for (int i = _.UnsyncedExtraWalls.Count - 1; i >= 0; i--)

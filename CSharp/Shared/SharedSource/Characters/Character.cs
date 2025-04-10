@@ -371,8 +371,11 @@ namespace CleanPatches
           humanAnimController.Crouching = false;
         }
         //ragdolling manually makes the character go through platforms
-        //EXCEPT for clients, they rely on the server telling whether platforms should be ignored or not
-        if (_.IsRagdolled && GameMain.NetworkMember is not { IsClient: true })
+        //EXCEPT if the character is controlled by the server (i.e. remote player or bot),
+        //in that case the server decides whether platforms should be ignored or not
+        bool isControlledByRemotelyByServer = GameMain.NetworkMember is { IsClient: true } && _.IsRemotelyControlled;
+        if (_.IsRagdolled &&
+            !isControlledByRemotelyByServer)
         {
           _.AnimController.IgnorePlatforms = true;
         }
@@ -385,9 +388,7 @@ namespace CleanPatches
 
       _.Control(deltaTime, cam);
 
-      bool isNotControlled = Character.Controlled != _;
-
-      if (isNotControlled && (!(_ is AICharacter) || _.IsRemotePlayer))
+      if (_.IsRemotePlayer)
       {
         Vector2 mouseSimPos = ConvertUnits.ToSimUnits(_.cursorPosition);
         _.DoInteractionUpdate(deltaTime, mouseSimPos);

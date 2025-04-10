@@ -62,10 +62,7 @@ namespace CleanPatches
         if (_.flashCooldown <= 0.0f)
         {
           _.flashTimer = 1.0f;
-          if (_.level.GenerationParams.FlashSound != null)
-          {
-            _.level.GenerationParams.FlashSound.Play(1.0f, "default");
-          }
+          _.level.GenerationParams.FlashSound?.Play(1.0f, Barotrauma.Sounds.SoundManager.SoundCategoryDefault);
           _.flashCooldown = Rand.Range(_.level.GenerationParams.FlashInterval.X, _.level.GenerationParams.FlashInterval.Y, Rand.RandSync.Unsynced);
         }
         if (_.flashTimer > 0.0f)

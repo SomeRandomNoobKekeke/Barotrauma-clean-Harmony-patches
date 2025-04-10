@@ -1,4 +1,5 @@
 // #define RUN_PHYSICS_IN_SEPARATE_THREAD
+//#define CLIENT
 
 using System;
 using System.Reflection;
@@ -9,13 +10,15 @@ using System.Linq;
 
 using Barotrauma;
 using HarmonyLib;
-using Microsoft.Xna.Framework;
 
 using Microsoft.Xna.Framework;
 using System.Threading;
 using FarseerPhysics.Dynamics;
+using FarseerPhysics;
+
 #if DEBUG && CLIENT
 using System;
+using Barotrauma.Sounds;
 using Microsoft.Xna.Framework.Input;
 #endif
 
@@ -95,7 +98,8 @@ namespace CleanPatches
         _.cam.Position = Submarine.MainSub.WorldPosition;
         _.cam.UpdateTransform(true);
       }
-      GameMain.GameSession?.CrewManager?.AutoShowCrewList();
+      GameMain.GameSession?.CrewManager?.ResetCrewListOpenState();
+      ChatBox.ResetChatBoxOpenState();
 #endif
 
       MapEntity.ClearHighlightedEntities();
@@ -147,7 +151,7 @@ namespace CleanPatches
 #endif
 
 #if CLIENT
-        GameMain.LightManager?.Update((float)deltaTime);
+      GameMain.LightManager?.Update((float)deltaTime);
 #endif
 
       _.GameTime += deltaTime;
@@ -162,49 +166,49 @@ namespace CleanPatches
       MapEntity.ClearHighlightedEntities();
 
 #if CLIENT
-        var sw = new System.Diagnostics.Stopwatch();
-        sw.Start();
+      var sw = new System.Diagnostics.Stopwatch();
+      sw.Start();
 #endif
 
       GameMain.GameSession?.Update((float)deltaTime);
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:GameSession", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:GameSession", sw.ElapsedTicks);
+      sw.Restart();
 
-        GameMain.ParticleManager.Update((float)deltaTime);
+      GameMain.ParticleManager.Update((float)deltaTime);
 
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Particles", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Particles", sw.ElapsedTicks);
+      sw.Restart();
 
-        if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, _.cam);
+      if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, _.cam);
 
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Level", sw.ElapsedTicks);
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Level", sw.ElapsedTicks);
 
-        if (Character.Controlled is { } controlled)
+      if (Character.Controlled is { } controlled)
+      {
+        if (controlled.SelectedItem != null && controlled.CanInteractWith(controlled.SelectedItem))
         {
-          if (controlled.SelectedItem != null && controlled.CanInteractWith(controlled.SelectedItem))
+          controlled.SelectedItem.UpdateHUD(_.cam, controlled, (float)deltaTime);
+        }
+        if (controlled.Inventory != null)
+        {
+          foreach (Item item in controlled.Inventory.AllItems)
           {
-            controlled.SelectedItem.UpdateHUD(_.cam, controlled, (float)deltaTime);
-          }
-          if (controlled.Inventory != null)
-          {
-            foreach (Item item in controlled.Inventory.AllItems)
+            if (controlled.HasEquippedItem(item))
             {
-              if (controlled.HasEquippedItem(item))
-              {
-                item.UpdateHUD(_.cam, controlled, (float)deltaTime);
-              }
+              item.UpdateHUD(_.cam, controlled, (float)deltaTime);
             }
           }
         }
+      }
 
-        sw.Restart();
+      sw.Restart();
 
-        Character.UpdateAll((float)deltaTime, _.cam);
+      Character.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
             if (Level.Loaded != null) Level.Loaded.Update((float)deltaTime, Camera.Instance);
             Character.UpdateAll((float)deltaTime, Camera.Instance);
@@ -212,24 +216,29 @@ namespace CleanPatches
 
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Character", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Character", sw.ElapsedTicks);
+      sw.Restart();
 #endif
 
       StatusEffect.UpdateAll((float)deltaTime);
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:StatusEffects", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:StatusEffects", sw.ElapsedTicks);
+      sw.Restart();
 
-        if (Character.Controlled != null &&
-            Barotrauma.Lights.LightManager.ViewTarget != null)
+      if (Character.Controlled != null &&
+              Barotrauma.Lights.LightManager.ViewTarget != null)
+      {
+        Vector2 targetPos = Barotrauma.Lights.LightManager.ViewTarget.WorldPosition;
+        if (Barotrauma.Lights.LightManager.ViewTarget == Character.Controlled)
         {
-          Vector2 targetPos = Barotrauma.Lights.LightManager.ViewTarget.WorldPosition;
-          if (Barotrauma.Lights.LightManager.ViewTarget == Character.Controlled &&
-              (CharacterHealth.OpenHealthWindow != null || CrewManager.IsCommandInterfaceOpen || ConversationAction.IsDialogOpen))
+          //take the NetworkPositionErrorOffset into account, meaning the camera is positioned
+          //where we've smoothed out the draw position of the character after a positional correction,
+          //instead of where the character's collider actually is
+          targetPos += ConvertUnits.ToDisplayUnits(Character.Controlled.AnimController.Collider.NetworkPositionErrorOffset);
+          if (CharacterHealth.OpenHealthWindow != null || CrewManager.IsCommandInterfaceOpen || ConversationAction.IsDialogOpen)
           {
             Vector2 screenTargetPos = new Vector2(GameMain.GraphicsWidth, GameMain.GraphicsHeight) * 0.5f;
             if (CharacterHealth.OpenHealthWindow != null)
@@ -244,12 +253,13 @@ namespace CleanPatches
             screenOffset.Y = -screenOffset.Y;
             targetPos -= screenOffset / _.cam.Zoom;
           }
-          _.cam.TargetPos = targetPos;
         }
+        _.cam.TargetPos = targetPos;
+      }
 
-        _.cam.MoveCamera((float)deltaTime, allowZoom: GUI.MouseOn == null && !Inventory.IsMouseOnInventory);
+      _.cam.MoveCamera((float)deltaTime, allowZoom: GUI.MouseOn == null && !Inventory.IsMouseOnInventory);
 
-        Character.Controlled?.UpdateLocalCursor(_.cam);
+      Character.Controlled?.UpdateLocalCursor(_.cam);
 #endif
 
       foreach (Submarine sub in Submarine.Loaded)
@@ -266,28 +276,28 @@ namespace CleanPatches
       }
 
 #if CLIENT
-        MapEntity.UpdateAll((float)deltaTime, _.cam);
+      MapEntity.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
       MapEntity.UpdateAll((float)deltaTime, Camera.Instance);
 #endif
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:MapEntity", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:MapEntity", sw.ElapsedTicks);
+      sw.Restart();
 #endif
       Character.UpdateAnimAll((float)deltaTime);
 
 #if CLIENT
-        Ragdoll.UpdateAll((float)deltaTime, _.cam);
+      Ragdoll.UpdateAll((float)deltaTime, _.cam);
 #elif SERVER
       Ragdoll.UpdateAll((float)deltaTime, Camera.Instance);
 #endif
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Ragdolls", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Ragdolls", sw.ElapsedTicks);
+      sw.Restart();
 #endif
 
       foreach (Submarine sub in Submarine.Loaded)
@@ -296,9 +306,9 @@ namespace CleanPatches
       }
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Submarine", sw.ElapsedTicks);
-        sw.Restart();
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Submarine", sw.ElapsedTicks);
+      sw.Restart();
 #endif
 
 #if !RUN_PHYSICS_IN_SEPARATE_THREAD
@@ -316,9 +326,9 @@ namespace CleanPatches
 
 
 #if CLIENT
-        sw.Stop();
-        GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
-        _.UpdateProjSpecific(deltaTime);
+      sw.Stop();
+      GameMain.PerformanceCounter.AddElapsedTicks("Update:Physics", sw.ElapsedTicks);
+      _.UpdateProjSpecific(deltaTime);
 #endif
       // Note: moved this to #if CLIENT because on server side UpdateProjSpecific isn't compiled 
       //_.UpdateProjSpecific(deltaTime);

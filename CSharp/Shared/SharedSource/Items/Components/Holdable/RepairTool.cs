@@ -111,7 +111,7 @@ namespace CleanPatches
         var barrelHull = Hull.FindHull(ConvertUnits.ToDisplayUnits(rayStartWorld), _.item.CurrentHull, useWorldCoordinates: true);
         if (barrelHull != null && barrelHull != _.item.CurrentHull)
         {
-          if (MathUtils.GetLineRectangleIntersection(ConvertUnits.ToDisplayUnits(sourcePos), ConvertUnits.ToDisplayUnits(rayStart), _.item.CurrentHull.Rect, out Vector2 hullIntersection))
+          if (MathUtils.GetLineWorldRectangleIntersection(ConvertUnits.ToDisplayUnits(sourcePos), ConvertUnits.ToDisplayUnits(rayStart), _.item.CurrentHull.Rect, out Vector2 hullIntersection))
           {
             if (!_.item.CurrentHull.ConnectedGaps.Any(g => g.Open > 0.0f && Submarine.RectContains(g.Rect, hullIntersection)))
             {
@@ -171,8 +171,10 @@ namespace CleanPatches
         _.Repair(rayStartWorld - parentSub.SimPosition, rayEnd - parentSub.SimPosition, deltaTime, character, degreeOfSuccess, _.ignoredBodies);
       }
 
-      //TODO test in multiplayer, this is probably not compiled on server side
+      // not compiled on server
+#if CLIENT
       _.UseProjSpecific(deltaTime, rayStartWorld);
+#endif
 
       __result = true; return false;
     }
@@ -426,7 +428,11 @@ namespace CleanPatches
 
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, structure: targetStructure);
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, structure: targetStructure);
+
+        //not compiled on server  
+#if CLIENT
         _.FixStructureProjSpecific(user, deltaTime, targetStructure, sectionIndex);
+#endif
 
         float structureFixAmount = _.StructureFixAmount;
         if (structureFixAmount >= 0f)
@@ -503,7 +509,12 @@ namespace CleanPatches
 
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, character: targetCharacter, limb: closestLimb);
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, character: targetCharacter, limb: closestLimb);
+
+        //not compiled on server  
+#if CLIENT
         _.FixCharacterProjSpecific(user, deltaTime, targetCharacter);
+#endif
+
         __result = true; return false;
       }
       else if (targetBody.UserData is Limb targetLimb)
@@ -520,7 +531,11 @@ namespace CleanPatches
         targetLimb.character.LastDamageSource = _.item;
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnUse, character: targetLimb.character, limb: targetLimb);
         _.ApplyStatusEffectsOnTarget(user, deltaTime, ActionType.OnSuccess, character: targetLimb.character, limb: targetLimb);
+
+        //not compiled on server  
+#if CLIENT
         _.FixCharacterProjSpecific(user, deltaTime, targetLimb.character);
+#endif
         __result = true; return false;
       }
       else if (targetBody.UserData is Barotrauma.Item or Holdable)
@@ -548,8 +563,10 @@ namespace CleanPatches
                   levelResource.DeattachTimer / levelResource.DeattachDuration,
                   GUIStyle.Red, GUIStyle.Green, "progressbar.deattaching");
           }
-#endif
+
+          //  not compiled on server
           _.FixItemProjSpecific(user, deltaTime, targetItem, showProgressBar: false);
+#endif
           __result = true; return false;
         }
 
@@ -575,8 +592,10 @@ namespace CleanPatches
           dir = dir.LengthSquared() < 0.0001f ? Vector2.UnitY : Vector2.Normalize(dir);
           targetItem.body.ApplyForce(dir * _.TargetForce, maxVelocity: 10.0f);
         }
-
+        //not compiled on server
+#if CLIENT
         _.FixItemProjSpecific(user, deltaTime, targetItem, showProgressBar: true);
+#endif
         __result = true; return false;
       }
       else if (targetBody.UserData is BallastFloraBranch branch)

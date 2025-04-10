@@ -28,7 +28,7 @@ namespace CleanPatches
       );
     }
 
-    public static bool SoundChannel_Constuctor_Replace(SoundChannel __instance, Sound sound, float gain, Vector3? position, float freqMult, float near, float far, string category, bool muffle = false)
+    public static bool SoundChannel_Constuctor_Replace(SoundChannel __instance, Sound sound, float gain, Vector3? position, float freqMult, float near, float far, Identifier category, bool muffle = false)
     {
       SoundChannel _ = __instance;
 

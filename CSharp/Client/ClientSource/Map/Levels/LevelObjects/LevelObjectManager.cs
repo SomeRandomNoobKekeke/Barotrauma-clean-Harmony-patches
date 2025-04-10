@@ -173,7 +173,7 @@ namespace CleanPatches
         activeSprite?.Draw(
             spriteBatch,
             new Vector2(obj.Position.X, -obj.Position.Y) - camDiff * obj.Position.Z * LevelObjectManager.ParallaxStrength,
-            Color.Lerp(obj.Prefab.SpriteColor, obj.Prefab.SpriteColor.Multiply(Level.Loaded.BackgroundTextureColor), obj.Position.Z / 3000.0f),
+            Color.Lerp(obj.Prefab.SpriteColor, obj.Prefab.SpriteColor.Multiply(Level.Loaded.BackgroundTextureColor), obj.Position.Z / obj.Prefab.FadeOutDepth),
             activeSprite.Origin,
             obj.CurrentRotation,
             obj.CurrentScale,

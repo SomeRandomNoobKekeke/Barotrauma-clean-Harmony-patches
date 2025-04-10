@@ -58,7 +58,7 @@ namespace CleanPatches
     {
       Structure _ = __instance;
 
-      if (!_.Prefab.Body || _.Prefab.Platform || _.Indestructible) { return false; }
+      if (!_.HasBody || _.Prefab.Platform || _.Indestructible) { return false; }
 
       if (sectionIndex < 0 || sectionIndex > _.Sections.Length - 1) { return false; }
 
@@ -114,7 +114,7 @@ namespace CleanPatches
       Structure _ = __instance;
 
       if (_.Submarine != null && _.Submarine.GodMode || (_.Indestructible && !isNetworkEvent)) { return false; }
-      if (!_.Prefab.Body) { return false; }
+      if (!_.HasBody) { return false; }
       if (!MathUtils.IsValid(damage)) { return false; }
 
       damage = MathHelper.Clamp(damage, 0.0f, _.MaxHealth - _.Prefab.MinHealth);
@@ -129,7 +129,7 @@ namespace CleanPatches
       bool noGaps = true;
       for (int i = 0; i < _.Sections.Length; i++)
       {
-        if (i != sectionIndex && SectionIsLeaking(i))
+        if (i != sectionIndex && _.SectionIsLeaking(i))
         {
           noGaps = false;
           break;
@@ -156,7 +156,9 @@ namespace CleanPatches
           _.Sections[sectionIndex].gap = null;
         }
       }
-      else
+      //do not create gaps on damaged walls in editors,
+      //they're created at the start of a round and "pre-creating" them in the editors causes issues (see #12998)
+      else if (Screen.Selected is not { IsEditor: true })
       {
         float prevGapOpenState = _.Sections[sectionIndex].gap?.Open ?? 0.0f;
         if (_.Sections[sectionIndex].gap == null)

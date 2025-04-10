@@ -85,6 +85,10 @@ namespace CleanPatches
       if (prefab == null || prefab.Sprites.Count == 0) { __result = null; return false; }
       if (_.particleCount >= _.MaxParticles)
       {
+        //maximum number of particles reached, and this is not a high-prio particle or something that should always draw
+        // -> the particle won't be created, we can return early
+        if (_.particleCount >= _.MaxParticles && prefab.Priority == 0 && !prefab.DrawAlways) { __result = null; return false; }
+
         for (int i = 0; i < _.particleCount; i++)
         {
           if (_.particles[i].Prefab.Priority < prefab.Priority ||

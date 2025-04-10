@@ -283,8 +283,13 @@ namespace CleanPatches
       graphics.SetRenderTarget(_.renderTargetDamageable);
       graphics.Clear(Color.Transparent);
       _.DamageEffect.CurrentTechnique = _.DamageEffect.Techniques["StencilShader"];
+      _.DamageEffect.CurrentTechnique.Passes[0].Apply();
       spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.NonPremultiplied, SamplerState.LinearWrap, effect: _.DamageEffect, transformMatrix: _.cam.Transform);
       Submarine.DrawDamageable(spriteBatch, _.DamageEffect, false);
+      _.DamageEffect.Parameters["aCutoff"].SetValue(0.0f);
+      _.DamageEffect.Parameters["cCutoff"].SetValue(0.0f);
+      Submarine.DamageEffectCutoff = 0.0f;
+      _.DamageEffect.CurrentTechnique.Passes[0].Apply();
       spriteBatch.End();
 
       sw.Stop();

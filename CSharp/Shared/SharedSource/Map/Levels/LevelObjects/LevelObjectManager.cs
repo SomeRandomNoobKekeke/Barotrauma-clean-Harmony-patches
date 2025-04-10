@@ -36,7 +36,7 @@ namespace CleanPatches
     }
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Levels/LevelObjects/LevelObjectManager.cs#L569
-    public static bool LevelObjectManager_Update_Replace(float deltaTime, LevelObjectManager __instance)
+    public static bool LevelObjectManager_Update_Replace(LevelObjectManager __instance, float deltaTime, Camera cam)
     {
       LevelObjectManager _ = __instance;
 
@@ -84,7 +84,7 @@ namespace CleanPatches
         }
       }
 #if CLIENT
-      _.UpdateProjSpecific(deltaTime);
+      _.UpdateProjSpecific(deltaTime,cam);
 #endif
 
       return false;

@@ -57,7 +57,7 @@ namespace CleanPatches
 
       int amountOfOutposts = _.Map.Locations.Count(location => location.Type.HasOutpost && !location.IsCriticallyRadiated());
 
-      foreach (Location location in _.Map.Locations.Where(_.Contains))
+      foreach (Location location in _.Map.Locations.Where(l => _.DepthInRadiation(l) > 0))
       {
         if (location.IsGateBetweenBiomes)
         {
@@ -103,25 +103,37 @@ namespace CleanPatches
         return false;
       }
 
-      if (_.radiationAffliction == null)
-      {
-        float radiationStrengthChange = AfflictionPrefab.RadiationSickness.Effects.FirstOrDefault()?.StrengthChange ?? 0.0f;
-        _.radiationAffliction = new Affliction(
-            AfflictionPrefab.RadiationSickness,
-            (_.Params.RadiationDamageAmount - radiationStrengthChange) * _.Params.RadiationDamageDelay);
-      }
-
       _.radiationTimer = _.Params.RadiationDamageDelay;
 
       foreach (Character character in Character.CharacterList)
       {
         if (character.IsDead || character.Removed || !(character.CharacterHealth is { } health)) { continue; }
 
-        if (_.IsEntityRadiated(character))
+        float depthInRadiation = _.DepthInRadiation(character);
+        if (depthInRadiation > 0)
         {
-          var limb = character.AnimController.MainLimb;
-          AttackResult attackResult = limb.AddDamage(limb.SimPosition, _.radiationAffliction.ToEnumerable(), playSound: false);
-          character.CharacterHealth.ApplyDamage(limb, attackResult);
+          AfflictionPrefab afflictionPrefab;
+          // Get the related affliction (if necessary, fall back to the traditional radiation sickness for slightly better backwards compatibility)
+          afflictionPrefab = AfflictionPrefab.JovianRadiation ?? AfflictionPrefab.RadiationSickness;
+          float currentAfflictionStrength = character.CharacterHealth.GetAfflictionStrengthByIdentifier(afflictionPrefab.Identifier);
+
+          // Get Jovian radiation strength, and cancel out the affliction's strength change (meant for decaying it)
+          // (for simplicity, let's assume each Effect of the Affliction has the same strengthchange)
+          float addedStrength = _.Params.RadiationDamageAmount - afflictionPrefab.Effects.FirstOrDefault()?.StrengthChange ?? 0.0f;
+
+          // Damage is applied periodically, so we must apply the total damage for the full period at once (after deducting strengthchange)
+          addedStrength *= _.Params.RadiationDamageDelay;
+
+          // The JovianRadiation affliction has brackets of 25 strength determined by the multiplier (1x = 0-25, 2x = 25-50 etc.)
+          int multiplier = (int)Math.Ceiling(depthInRadiation / _.Params.RadiationEffectMultipliedPerPixelDistance);
+          float growthPotentialInBracket = (multiplier * 25) - currentAfflictionStrength;
+          if (growthPotentialInBracket > 0)
+          {
+            addedStrength = Math.Min(addedStrength, growthPotentialInBracket);
+            character.CharacterHealth.ApplyAffliction(
+                character.AnimController?.MainLimb,
+                afflictionPrefab.Instantiate(addedStrength));
+          }
         }
       }
 

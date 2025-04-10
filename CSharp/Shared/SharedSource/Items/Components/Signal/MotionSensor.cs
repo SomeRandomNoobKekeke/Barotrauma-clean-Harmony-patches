@@ -107,8 +107,15 @@ namespace CleanPatches
 
           if (worldBorders.Intersects(detectRect))
           {
-            _.MotionDetected = true;
-            return false;
+            foreach (Structure wall in Structure.WallList)
+            {
+              if (wall.Submarine == sub &&
+                  wall.WorldRect.Intersects(detectRect))
+              {
+                _.MotionDetected = true;
+                return false;
+              }
+            }
           }
         }
       }

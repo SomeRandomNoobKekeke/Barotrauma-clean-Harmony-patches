@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Xna.Framework.Input;
 using PlayerBalanceElement = Barotrauma.CampaignUI.PlayerBalanceElement;
 
 namespace CleanPatches
@@ -38,6 +39,15 @@ namespace CleanPatches
       Store _ = __instance;
 
       _.updateStopwatch.Restart();
+
+      if (GameMain.DevMode)
+      {
+        if (PlayerInput.KeyDown(Keys.D0))
+        {
+          _.CreateUI();
+          _.needsRefresh = true;
+        }
+      }
 
       if (GameMain.GraphicsWidth != _.resolutionWhenCreated.X || GameMain.GraphicsHeight != _.resolutionWhenCreated.Y)
       {

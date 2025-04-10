@@ -216,7 +216,7 @@ namespace CleanPatches
         {
           light.ParentBody.UpdateDrawPosition();
 
-          Vector2 pos = light.ParentBody.DrawPosition;
+          Vector2 pos = light.ParentBody.DrawPosition + light.OffsetFromBody;
           if (light.ParentSub != null) { pos -= light.ParentSub.DrawPosition; }
           light.Position = pos;
         }

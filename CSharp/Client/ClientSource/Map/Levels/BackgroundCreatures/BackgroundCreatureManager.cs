@@ -36,16 +36,27 @@ namespace CleanPatches
 
       if (_.checkVisibleTimer < 0.0f)
       {
+        _.visibleCreatures.Clear();
         int margin = 500;
         foreach (BackgroundCreature creature in _.creatures)
         {
           Rectangle extents = creature.GetExtents(cam);
-          bool wasVisible = creature.Visible;
           creature.Visible =
               extents.Right >= cam.WorldView.X - margin &&
               extents.X <= cam.WorldView.Right + margin &&
               extents.Bottom >= cam.WorldView.Y - cam.WorldView.Height - margin &&
               extents.Y <= cam.WorldView.Y + margin;
+          if (creature.Visible)
+          {
+            //insertion sort according to depth
+            int i = 0;
+            while (i < _.visibleCreatures.Count)
+            {
+              if (_.visibleCreatures[i].Depth < creature.Depth) { break; }
+              i++;
+            }
+            _.visibleCreatures.Insert(i, creature);
+          }
         }
 
         _.checkVisibleTimer = BackgroundCreatureManager.VisibilityCheckInterval;
@@ -55,9 +66,8 @@ namespace CleanPatches
         _.checkVisibleTimer -= deltaTime;
       }
 
-      foreach (BackgroundCreature creature in _.creatures)
+      foreach (BackgroundCreature creature in _.visibleCreatures)
       {
-        if (!creature.Visible) { continue; }
         creature.Update(deltaTime);
       }
 
@@ -72,11 +82,10 @@ namespace CleanPatches
 
       _.creatures.Clear();
 
-      if (_.prefabs.Count == 0) { return false; }
+      List<BackgroundCreaturePrefab> availablePrefabs = new List<BackgroundCreaturePrefab>(BackgroundCreaturePrefab.Prefabs.OrderBy(p => p.Identifier.Value));
+      if (availablePrefabs.Count == 0) { return false; }
 
       count = Math.Min(count, BackgroundCreatureManager.MaxCreatures);
-
-      List<BackgroundCreaturePrefab> availablePrefabs = new List<BackgroundCreaturePrefab>(_.prefabs);
 
       for (int i = 0; i < count; i++)
       {
@@ -100,7 +109,7 @@ namespace CleanPatches
           pos = (Vector2)position;
         }
 
-        var prefab = ToolBox.SelectWeightedRandom(availablePrefabs, availablePrefabs.Select(p => p.GetCommonness(level.GenerationParams)).ToList(), Rand.RandSync.ClientOnly);
+        var prefab = ToolBox.SelectWeightedRandom(availablePrefabs, availablePrefabs.Select(p => p.GetCommonness(level?.LevelData)).ToList(), Rand.RandSync.ClientOnly);
         if (prefab == null) { break; }
 
         int amount = Rand.Range(prefab.SwarmMin, prefab.SwarmMax + 1, Rand.RandSync.ClientOnly);

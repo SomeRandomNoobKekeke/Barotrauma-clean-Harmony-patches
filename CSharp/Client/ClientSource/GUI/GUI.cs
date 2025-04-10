@@ -417,9 +417,13 @@ namespace CleanPatches
 
         GUI.DrawMessages(spriteBatch, cam);
 
-        if (GUI.MouseOn != null && !GUI.MouseOn.ToolTip.IsNullOrWhiteSpace())
+        if (GUI.MouseOn != null)
         {
-          GUI.MouseOn.DrawToolTip(spriteBatch);
+          if (!GUI.MouseOn.ToolTip.IsNullOrWhiteSpace())
+          {
+            GUI.MouseOn.DrawToolTip(spriteBatch);
+          }
+          GUI.MouseOn.OnDrawToolTip?.Invoke(GUI.MouseOn);
         }
 
         if (SubEditorScreen.IsSubEditor())
