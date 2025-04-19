@@ -1,3 +1,5 @@
+## Updated to 1.8.7.0
+
 ## What is this?
 C# mod for Barotrauma that replaces Barotrauma code with identical Harmony patches
 
