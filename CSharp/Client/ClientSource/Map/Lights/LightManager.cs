@@ -65,21 +65,21 @@ namespace CleanPatches
         const float MaxOffset = 256.0f;
         //the magic numbers here are just based on experimentation
         float MinHorizontalScale = MathHelper.Lerp(3.5f, 1.5f, _.ObstructVisionAmount);
-        float MaxHorizontalScale = MinHorizontalScale * 1.25f;
+        float MaxHorizontalScale = 10.0f;
         float VerticalScale = MathHelper.Lerp(4.0f, 1.25f, _.ObstructVisionAmount);
-
-        //Starting point and scale-based modifier that moves the point of origin closer to the edge of the texture if the player moves their mouse further away, or vice versa.
-        float relativeOriginStartPosition = 0.1f; //Increasing this value moves the origin further behind the character
-        float originStartPosition = _.visionCircle.Width * relativeOriginStartPosition * MinHorizontalScale;
-        float relativeOriginLookAtPosModifier = -0.055f; //Increase this value increases how much the vision changes by moving the mouse
-        float originLookAtPosModifier = _.visionCircle.Width * relativeOriginLookAtPosModifier;
 
         Vector2 scale = new Vector2(
             MathHelper.Clamp(_.losOffset.Length() / MaxOffset, MinHorizontalScale, MaxHorizontalScale), VerticalScale);
 
+        //Increasing this value moves the origin further behind the character (current value chosen by experimentation)
+        float relativeOriginStartPosition = 0.2f;
+        //Divide by scale to move the origin closer to the edge of the texture, meaning the visible area moves forwards.
+        //Just stretching the texture without touching the origin would otherwise mean the blurry edge of visibility moves further behind the character (allowing you to see behind you better when looking far away)
+        float originStartPosition = _.visionCircle.Width * relativeOriginStartPosition / scale.X;
+
         spriteBatch.Begin(SpriteSortMode.Deferred, transformMatrix: cam.Transform * Matrix.CreateScale(new Vector3(GameSettings.CurrentConfig.Graphics.LightMapScale, GameSettings.CurrentConfig.Graphics.LightMapScale, 1.0f)));
         spriteBatch.Draw(_.visionCircle, new Vector2(LightManager.ViewTarget.WorldPosition.X, -LightManager.ViewTarget.WorldPosition.Y), null, Color.White, rotation,
-            new Vector2(originStartPosition + (scale.X * originLookAtPosModifier), _.visionCircle.Height / 2), scale, SpriteEffects.None, 0.0f);
+            new Vector2(originStartPosition, _.visionCircle.Height / 2), scale, SpriteEffects.None, 0.0f);
         spriteBatch.End();
       }
       else

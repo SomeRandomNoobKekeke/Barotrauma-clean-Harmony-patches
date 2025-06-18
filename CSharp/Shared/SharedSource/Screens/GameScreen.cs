@@ -158,7 +158,7 @@ namespace CleanPatches
 
       foreach (PhysicsBody body in PhysicsBody.List)
       {
-        if (body.Enabled && body.BodyType != FarseerPhysics.BodyType.Static)
+        if ((body.Enabled || body.UserData is Character) && body.BodyType != BodyType.Static)
         {
           body.Update();
         }

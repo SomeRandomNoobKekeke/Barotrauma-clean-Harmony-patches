@@ -387,7 +387,7 @@ namespace CleanPatches
 #if CLIENT
                   float barOffset = 10f * GUI.Scale;
                   Vector2 offset = planter.PlantSlots.ContainsKey(i) ? planter.PlantSlots[i].Offset : Vector2.Zero;
-                  user?.UpdateHUDProgressBar(planter, planter.Item.DrawPosition + new Vector2(barOffset, 0) + offset, seed.Health / seed.MaxHealth, GUIStyle.Blue, GUIStyle.Blue, "progressbar.watering");
+                  user?.UpdateHUDProgressBar(planter, planter.Item.DrawPosition + new Vector2(barOffset, 0) + offset, seed.Health / seed.MaxWater, GUIStyle.Blue, GUIStyle.Blue, "progressbar.watering");
 #endif
                 }
               }

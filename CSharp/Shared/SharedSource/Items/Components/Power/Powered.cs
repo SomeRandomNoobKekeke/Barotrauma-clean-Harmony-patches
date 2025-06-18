@@ -83,7 +83,7 @@ namespace CleanPatches
         powered.Voltage -= deltaTime;
 
         //Handle the device if it's got a power connection
-        if (powered.powerIn != null && powered.powerOut != powered.powerIn)
+        if (powered.powerIn != null && !powered.powerInIsPowerOut)
         {
           //Get the new load for the connection
           float currLoad = powered.GetCurrentPowerConsumption(powered.powerIn);
@@ -111,10 +111,10 @@ namespace CleanPatches
         }
 
         //Handle the device power depending on if its powerout
-        if (powered.powerOut != null)
+        foreach (Connection powerOut in powered.powerOuts)
         {
           //Get the connection's load
-          float currLoad = powered.GetCurrentPowerConsumption(powered.powerOut);
+          float currLoad = powered.GetCurrentPowerConsumption(powerOut);
 
           //Update the device's output load to the correct variable
           if (powered is PowerTransfer pt)
@@ -133,20 +133,20 @@ namespace CleanPatches
           if (currLoad >= 0)
           {
             //Add to the grid load if possible
-            if (powered.powerOut.Grid != null)
+            if (powerOut.Grid != null)
             {
-              powered.powerOut.Grid.Load += currLoad;
+              powerOut.Grid.Load += currLoad;
             }
           }
-          else if (powered.powerOut.Grid != null)
+          else if (powerOut.Grid != null)
           {
             //Add connection as a source to be processed
-            powered.powerOut.Grid.AddSrc(powered.powerOut);
+            powerOut.Grid.AddSrc(powerOut);
           }
           else
           {
             //Perform power calculations for the singular connection
-            float loadOut = -powered.GetConnectionPowerOut(powered.powerOut, 0, powered.MinMaxPowerOut(powered.powerOut, 0), 0);
+            float loadOut = -powered.GetConnectionPowerOut(powerOut, 0, powered.MinMaxPowerOut(powerOut, 0), 0);
             if (powered is PowerTransfer pt2)
             {
               pt2.PowerLoad = loadOut;
@@ -161,7 +161,7 @@ namespace CleanPatches
             }
 
             //Indicate grid is resolved as it was the only device
-            powered.GridResolved(powered.powerOut);
+            powered.GridResolved(powerOut);
           }
         }
       }

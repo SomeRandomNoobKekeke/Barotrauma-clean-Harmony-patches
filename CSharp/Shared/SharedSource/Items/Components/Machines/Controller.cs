@@ -163,7 +163,7 @@ namespace CleanPatches
         // Don't move lower body limbs if there's another selected secondary item that should control them
         if (limb.IsLowerBody && _.user.HasSelectedAnotherSecondaryItem(_.Item)) { continue; }
         // Don't move hands if there's a selected primary item that should control them
-        if (!limb.IsLowerBody && _.Item == _.user.SelectedSecondaryItem && _.user.SelectedItem != null) { continue; }
+        if (limb.IsArm && _.Item == _.user.SelectedSecondaryItem && _.user.SelectedItem != null) { continue; }
         if (lb.AllowUsingLimb)
         {
           switch (lb.LimbType)

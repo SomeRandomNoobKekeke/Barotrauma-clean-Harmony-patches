@@ -1,13 +1,15 @@
-## Updated to 1.8.7.0
+## Updated to 1.9.7.0
 
 ## What is this?
 C# mod for Barotrauma that replaces Barotrauma code with identical Harmony patches
 
 Designed to be used as template for other c# mods
-## Why???
-Because now i have 2 c# mods depending on similar set of methods, and i think it's easier to apply baro updates to this and then apply mod specific changes on top of that than to apply baro updates in two places
 
-And i can imagine other modders (or future me) would want to skip monkey work and just copy paste this
+If you need some method thats not here just ask me to convert it or make a pr, it's easy
+## Why???
+To reuse this code whenever i want to rewrite some old mod from scratch or start a new one that depends on these methods
+
+Also i merge all barotrauma changes here so i wouldn't have to check the whole barotrauma diff for each mod to see if i need to update it
 
 ## How???
 Secret method:

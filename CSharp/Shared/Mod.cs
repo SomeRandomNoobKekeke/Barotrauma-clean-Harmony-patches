@@ -33,6 +33,8 @@ namespace CleanPatches
 #elif SERVER
       PatchOnServer();
 #endif
+
+      log("Clean harmony patches compiled without errors");
     }
 
     public void PatchOnBothSides()

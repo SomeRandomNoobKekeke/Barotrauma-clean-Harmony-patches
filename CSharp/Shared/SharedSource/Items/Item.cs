@@ -64,7 +64,7 @@ namespace CleanPatches
     {
       Item _ = __instance;
 
-      if (!_.isActive || _.IsLayerHidden) { return false; }
+      if (!_.isActive || _.IsLayerHidden || _.IsInRemoveQueue) { return false; }
 
       if (_.impactQueue != null)
       {

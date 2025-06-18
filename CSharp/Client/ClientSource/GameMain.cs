@@ -257,6 +257,7 @@ namespace CleanPatches
         {
           if (_.ConnectCommand.TryUnwrap(out var connectCommand))
           {
+            DebugConsole.NewMessage($"Processing connect command: {connectCommand}...", Color.Lime);
             if (GameMain.Client != null)
             {
               GameMain.Client.Quit();
@@ -268,6 +269,7 @@ namespace CleanPatches
 
             if (connectCommand.SteamLobbyIdOption.TryUnwrap(out var lobbyId))
             {
+              DebugConsole.NewMessage($"Connecting to lobby ID {lobbyId}...", Color.Lime);
               SteamManager.JoinLobby(lobbyId.Value, joinServer: true);
             }
             else if ((connectCommand.NameAndP2PEndpointsOption.TryUnwrap(out var nameAndEndpoint) && nameAndEndpoint is { ServerName: var serverName, Endpoints: var endpoints }))
@@ -276,6 +278,7 @@ namespace CleanPatches
                   endpoints.Cast<Endpoint>().ToImmutableArray(),
                   string.IsNullOrWhiteSpace(serverName) ? endpoints.First().StringRepresentation : serverName,
                   Option<int>.None());
+              DebugConsole.NewMessage($"Connecting to endpoint {endpoints.First().StringRepresentation}...", Color.Lime);
             }
             else if ((connectCommand.NameAndLidgrenEndpointOption.TryUnwrap(out var nameAndLidgrenEndpoint) && nameAndLidgrenEndpoint is { ServerName: var lidgrenServerName, Endpoint: var endpoint }))
             {
@@ -284,6 +287,10 @@ namespace CleanPatches
                   endpoint,
                   string.IsNullOrWhiteSpace(lidgrenServerName) ? endpoint.StringRepresentation : lidgrenServerName,
                   Option<int>.None());
+            }
+            else
+            {
+              DebugConsole.NewMessage($"Cannot connect: unrecognized connect command.", Color.Lime);
             }
 
             _.ConnectCommand = Option<ConnectCommand>.None();
