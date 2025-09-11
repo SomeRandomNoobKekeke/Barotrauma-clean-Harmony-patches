@@ -47,7 +47,11 @@ namespace CleanPatches
               impulseDirection: character.WorldPosition - node.WorldPosition);
         }
       }
+
+#if CLIENT
       _.DischargeProjSpecific();
+#endif
+
       _.charging = false;
 
       return false;

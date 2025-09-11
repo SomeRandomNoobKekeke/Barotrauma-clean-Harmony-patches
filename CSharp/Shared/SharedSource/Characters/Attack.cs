@@ -54,7 +54,9 @@ namespace CleanPatches
 
       _.SetUser(attacker);
 
+#if CLIENT
       _.DamageParticles(deltaTime, worldPosition);
+#endif
 
       float penetration = _.Penetration;
 

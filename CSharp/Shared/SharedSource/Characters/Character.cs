@@ -83,7 +83,7 @@ namespace CleanPatches
         _.SetOrder(order, isNewOrder: true, speak: false);
       }
 #if SERVER
-      GameMain.NetworkMember.CreateEntityEvent(_, new TeamChangeEventData());
+      GameMain.NetworkMember.CreateEntityEvent(_, new Character.TeamChangeEventData());
 #endif
     }
 

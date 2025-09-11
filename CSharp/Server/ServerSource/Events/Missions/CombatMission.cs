@@ -32,29 +32,29 @@ namespace CleanPatches
       CombatMission _ = __instance;
       __runOriginal = false;
 
-      for (int i = 0; i < crews.Length; i++)
+      for (int i = 0; i < _.crews.Length; i++)
       {
-        foreach (var character in crews[i])
+        foreach (var character in _.crews[i])
         {
           if (character.IsDead)
           {
-            AddKill(character);
+            _.AddKill(character);
           }
         }
       }
 
-      crews[0].Clear();
-      crews[1].Clear();
+      _.crews[0].Clear();
+      _.crews[1].Clear();
       foreach (Character character in Character.CharacterList)
       {
         if (character.IsDead) { continue; }
         if (character.TeamID == CharacterTeamType.Team1)
         {
-          crews[0].Add(character);
+          _.crews[0].Add(character);
         }
         else if (character.TeamID == CharacterTeamType.Team2)
         {
-          crews[1].Add(character);
+          _.crews[1].Add(character);
         }
         if (character.IsBot && character.AIController is HumanAIController humanAi)
         {
