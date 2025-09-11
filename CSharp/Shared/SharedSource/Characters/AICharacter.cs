@@ -50,7 +50,7 @@ namespace CleanPatches
       AICharacter _ = __instance;
 
       //base.Update(deltaTime, cam);
-      Character_Update_Replace(deltaTime, cam, _);
+      Character_Update_Replace(_, deltaTime, cam);
 
       if (!_.Enabled) { return false; }
       if (!_.IsRemotePlayer && _.AIController is EnemyAIController enemyAi)

@@ -37,6 +37,16 @@ namespace CleanPatches
     public static void PatchSharedCharacter()
     {
       harmony.Patch(
+        original: typeof(Character).GetMethod("ChangeTeam", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_ChangeTeam_Replace"))
+      );
+
+      harmony.Patch(
+        original: typeof(Character).GetMethod("UpdateTeam", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_UpdateTeam_Replace"))
+      );
+
+      harmony.Patch(
         original: typeof(Character).GetMethod("UpdateAll", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_UpdateAll_Replace"))
       );
@@ -51,6 +61,67 @@ namespace CleanPatches
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_Control_Replace"))
       );
     }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L307
+    public static void Character_ChangeTeam_Replace(Character __instance, ref bool __runOriginal, CharacterTeamType newTeam)
+    {
+      Character _ = __instance;
+      __runOriginal = false;
+
+
+      if (newTeam == _.teamID) { return; }
+      _.originalTeamID ??= _.teamID;
+      _.TeamID = newTeam;
+      if (GameMain.NetworkMember != null && GameMain.NetworkMember.IsClient)
+      {
+        return;
+      }
+      if (_.AIController is HumanAIController)
+      {
+        // clear up any duties the character might have had from its old team (autonomous objectives are automatically recreated)
+        var order = OrderPrefab.Dismissal.CreateInstance(OrderPrefab.OrderTargetType.Entity, orderGiver: _).WithManualPriority(CharacterInfo.HighestManualOrderPriority);
+        _.SetOrder(order, isNewOrder: true, speak: false);
+      }
+#if SERVER
+      GameMain.NetworkMember.CreateEntityEvent(_, new TeamChangeEventData());
+#endif
+    }
+
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L363
+    public static void Character_UpdateTeam_Replace(Character __instance, ref bool __runOriginal)
+    {
+      Character _ = __instance;
+      __runOriginal = false;
+
+
+      if (_.currentTeamChange == null)
+      {
+        return;
+      }
+
+      ActiveTeamChange bestTeamChange = _.currentTeamChange;
+      foreach (var desiredTeamChange in _.activeTeamChanges) // order of iteration matters because newest is preferred when multiple same-priority team changes exist
+      {
+        if (bestTeamChange.TeamChangePriority < desiredTeamChange.Value.TeamChangePriority)
+        {
+          bestTeamChange = desiredTeamChange.Value;
+        }
+      }
+      if (_.TeamID != bestTeamChange.DesiredTeamId)
+      {
+        _.ChangeTeam(bestTeamChange.DesiredTeamId);
+        _.currentTeamChange = bestTeamChange;
+
+        // this seemed like the least disruptive way to induce aggressive behavior on human characters
+        if (bestTeamChange.AggressiveBehavior && _.AIController is HumanAIController)
+        {
+          var order = OrderPrefab.Prefabs["fightintruders"].CreateInstance(OrderPrefab.OrderTargetType.Entity, orderGiver: _).WithManualPriority(CharacterInfo.HighestManualOrderPriority);
+          _.SetOrder(order, isNewOrder: true, speak: false);
+        }
+      }
+    }
+
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L3366
     public static bool Character_UpdateAll_Replace(float deltaTime, Camera cam)
@@ -140,7 +211,7 @@ namespace CleanPatches
 
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L3450
-    public static bool Character_Update_Replace(float deltaTime, Camera cam, Character __instance)
+    public static bool Character_Update_Replace(Character __instance, float deltaTime, Camera cam)
     {
       Character _ = __instance;
 
@@ -427,7 +498,7 @@ namespace CleanPatches
 
 
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L2154
-    public static bool Character_Control_Replace(float deltaTime, Camera cam, Character __instance)
+    public static bool Character_Control_Replace(Character __instance, float deltaTime, Camera cam)
     {
       Character _ = __instance;
 

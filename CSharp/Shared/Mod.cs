@@ -75,6 +75,9 @@ namespace CleanPatches
 
     public void OnLoadCompleted() { }
     public void PreInitPatching() { }
-    public void Dispose() { }
+    public void Dispose()
+    {
+      harmony.UnpatchSelf();
+    }
   }
 }

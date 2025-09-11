@@ -29,7 +29,147 @@ namespace CleanPatches
         original: typeof(HumanAIController).GetMethod("Update", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("HumanAIController_Update_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(HumanAIController).GetMethod("ReportProblems", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("HumanAIController_ReportProblems_Replace"))
+      );
     }
+
+    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/HumanAIController.cs#L1017
+    public static void HumanAIController_ReportProblems_Replace(HumanAIController __instance, ref bool __runOriginal)
+    {
+      HumanAIController _ = __instance;
+      __runOriginal = false;
+
+
+      Order newOrder = null;
+      Hull targetHull = null;
+
+      // for now, escorted characters use the report system to get targets but do not speak. escort-character specific dialogue could be implemented
+      bool speak = _.Character.SpeechImpediment < 100 && !_.Character.IsEscorted;
+      if (_.Character.CurrentHull != null)
+      {
+        bool isFighting = _.ObjectiveManager.HasActiveObjective<AIObjectiveCombat>();
+        bool isFleeing = _.ObjectiveManager.HasActiveObjective<AIObjectiveFindSafety>();
+        foreach (var hull in _.VisibleHulls)
+        {
+          foreach (Character target in Character.CharacterList)
+          {
+            if (target.CurrentHull != hull || !target.Enabled || target.InDetectable) { continue; }
+            if (AIObjectiveFightIntruders.IsValidTarget(target, _.Character, targetCharactersInOtherSubs: false))
+            {
+              if (HumanAIController.AddTargets<AIObjectiveFightIntruders, Character>(_.Character, target) && newOrder == null)
+              {
+                var orderPrefab = OrderPrefab.Prefabs["reportintruders"];
+                newOrder = new Order(orderPrefab, hull, targetItem: null, orderGiver: _.Character);
+                targetHull = hull;
+                if (target.IsEscorted)
+                {
+                  if (!_.Character.IsPrisoner && target.IsPrisoner)
+                  {
+                    LocalizedString msg = TextManager.GetWithVariables("orderdialog.prisonerescaped", ("[roomname]", targetHull.DisplayName, FormatCapitals.No));
+                    _.Character.Speak(msg.Value, ChatMessageType.Order);
+                    speak = false;
+                  }
+                  else if (!_.IsMentallyUnstable && target.AIController.IsMentallyUnstable)
+                  {
+                    LocalizedString msg = TextManager.GetWithVariables("orderdialog.mentalcase", ("[roomname]", targetHull.DisplayName, FormatCapitals.No));
+                    _.Character.Speak(msg.Value, ChatMessageType.Order);
+                    speak = false;
+                  }
+                }
+              }
+              if (_.Character.CombatAction == null && !isFighting)
+              {
+                // Immediately react to enemies when they are spotted. AIObjectiveFightIntruders and AIObjectiveFindSafety would make the bot react to the threats,
+                // but the reaction is delayed (and doesn't necessarily target this enemy), and in many cases the reaction would come only when the enemy attacks and triggers AIObjectiveCombat.
+                _.AddCombatObjective(_.ObjectiveManager.HasObjectiveOrOrder<AIObjectiveFightIntruders>() ? AIObjectiveCombat.CombatMode.Offensive : AIObjectiveCombat.CombatMode.Defensive, target);
+              }
+            }
+          }
+          if (AIObjectiveExtinguishFires.IsValidTarget(hull, _.Character))
+          {
+            if (HumanAIController.AddTargets<AIObjectiveExtinguishFires, Hull>(_.Character, hull) && newOrder == null)
+            {
+              var orderPrefab = OrderPrefab.Prefabs["reportfire"];
+              newOrder = new Order(orderPrefab, hull, targetItem: null, orderGiver: _.Character);
+              targetHull = hull;
+            }
+          }
+          if (HumanAIController.IsBallastFloraNoticeable(_.Character, hull) && newOrder == null)
+          {
+            var orderPrefab = OrderPrefab.Prefabs["reportballastflora"];
+            newOrder = new Order(orderPrefab, hull, targetItem: null, orderGiver: _.Character);
+            targetHull = hull;
+          }
+          if (!isFighting)
+          {
+            foreach (var gap in hull.ConnectedGaps)
+            {
+              if (AIObjectiveFixLeaks.IsValidTarget(gap, _.Character))
+              {
+                if (HumanAIController.AddTargets<AIObjectiveFixLeaks, Gap>(_.Character, gap) && newOrder == null && !gap.IsRoomToRoom)
+                {
+                  var orderPrefab = OrderPrefab.Prefabs["reportbreach"];
+                  newOrder = new Order(orderPrefab, hull, targetItem: null, orderGiver: _.Character);
+                  targetHull = hull;
+                }
+              }
+            }
+            if (!isFleeing)
+            {
+              foreach (Character target in Character.CharacterList)
+              {
+                if (target.CurrentHull != hull) { continue; }
+                if (AIObjectiveRescueAll.IsValidTarget(target, _.Character, out bool ignoredAsMinorWounds))
+                {
+                  if (HumanAIController.AddTargets<AIObjectiveRescueAll, Character>(_.Character, target) && newOrder == null && (!_.Character.IsMedic || _.Character == target) && !_.ObjectiveManager.HasActiveObjective<AIObjectiveRescue>())
+                  {
+                    var orderPrefab = OrderPrefab.Prefabs["requestfirstaid"];
+                    newOrder = new Order(orderPrefab, hull, targetItem: null, orderGiver: _.Character);
+                    targetHull = hull;
+                  }
+                }
+              }
+              foreach (Item item in Item.RepairableItems)
+              {
+                if (item.CurrentHull != hull) { continue; }
+                if (AIObjectiveRepairItems.IsValidTarget(item, _.Character))
+                {
+                  if (!item.Repairables.Any(r => r.IsBelowRepairIconThreshold)) { continue; }
+                  if (HumanAIController.AddTargets<AIObjectiveRepairItems, Item>(_.Character, item) && newOrder == null && !_.ObjectiveManager.HasActiveObjective<AIObjectiveRepairItem>())
+                  {
+                    var orderPrefab = OrderPrefab.Prefabs["reportbrokendevices"];
+                    newOrder = new Order(orderPrefab, hull, item.Repairables?.FirstOrDefault(), orderGiver: _.Character);
+                    targetHull = hull;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if (newOrder != null && speak)
+      {
+        string msg = newOrder.GetChatMessage(string.Empty, targetHull?.DisplayName?.Value ?? string.Empty, givingOrderToSelf: false);
+        if (_.Character.TeamID == CharacterTeamType.FriendlyNPC)
+        {
+          _.Character.Speak(msg, ChatMessageType.Default, identifier: $"{newOrder.Prefab.Identifier}{targetHull?.RoomName ?? "null"}".ToIdentifier(), minDurationBetweenSimilar: 60f);
+        }
+        else if (_.Character.IsOnPlayerTeam && GameMain.GameSession?.CrewManager != null && GameMain.GameSession.CrewManager.AddOrder(newOrder, newOrder.FadeOutTime))
+        {
+          _.Character.Speak(msg, messageType: ChatMessageType.Order);
+#if SERVER
+          GameMain.Server.SendOrderChatMessage(new OrderChatMessage(newOrder
+              .WithManualPriority(CharacterInfo.HighestManualOrderPriority)
+              .WithTargetEntity(targetHull)
+              .WithOrderGiver(_.Character), msg, targetCharacter: null, sender: _.Character));
+#endif
+        }
+      }
+    }
+
 
     // Base call detected, you also need AIController_Update_Replace to run this
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/HumanAIController.cs#L193
