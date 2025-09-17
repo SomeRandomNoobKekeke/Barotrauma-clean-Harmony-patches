@@ -721,7 +721,9 @@ namespace CleanPatches
 
       if (_.Inventory != null)
       {
-        if (_.IsKeyHit(InputType.DropItem) && Screen.Selected is { IsEditor: false })
+        //this doesn't need to be run by the server, clients sync the contents of their inventory with the server instead of the inputs used to manipulate the inventory
+#if CLIENT
+        if (_.IsKeyHit(InputType.DropItem) && Screen.Selected is { IsEditor: false }&&  CharacterHUD.ShouldDrawInventory(_))
         {
           foreach (Item item in _.HeldItems)
           {
@@ -739,7 +741,7 @@ namespace CleanPatches
             break;
           }
         }
-
+#endif
         bool CanUseItemsWhenSelected(Item item) => item == null || !item.Prefab.DisableItemUsageWhenSelected;
         if (CanUseItemsWhenSelected(_.SelectedItem) && CanUseItemsWhenSelected(_.SelectedSecondaryItem))
         {

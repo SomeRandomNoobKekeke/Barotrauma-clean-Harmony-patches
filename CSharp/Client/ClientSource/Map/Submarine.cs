@@ -192,33 +192,34 @@ namespace CleanPatches
     // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Submarine.cs#L165
     public static bool Submarine_DrawDamageable_Replace(SpriteBatch spriteBatch, Effect damageEffect, bool editing = false, Predicate<MapEntity> predicate = null)
     {
-      if (!editing && Submarine.visibleEntities != null)
+      var entitiesToRender = !editing && Submarine.visibleEntities != null ? Submarine.visibleEntities : MapEntity.MapEntityList;
+
+      Submarine.depthSortedDamageable.Clear();
+
+      //insertion sort according to draw depth
+      foreach (MapEntity e in entitiesToRender)
       {
-        foreach (MapEntity e in Submarine.visibleEntities)
+        if (e is Structure structure && structure.DrawDamageEffect)
         {
-          if (e is Structure structure && structure.DrawDamageEffect)
+          if (predicate != null)
           {
-            if (predicate != null)
-            {
-              if (!predicate(structure)) { continue; }
-            }
-            structure.DrawDamage(spriteBatch, damageEffect, editing);
+            if (!predicate(e)) { continue; }
           }
+          float drawDepth = structure.GetDrawDepth();
+          int i = 0;
+          while (i < Submarine.depthSortedDamageable.Count)
+          {
+            float otherDrawDepth = Submarine.depthSortedDamageable[i].GetDrawDepth();
+            if (otherDrawDepth < drawDepth) { break; }
+            i++;
+          }
+          Submarine.depthSortedDamageable.Insert(i, structure);
         }
       }
-      else
+
+      foreach (Structure s in Submarine.depthSortedDamageable)
       {
-        foreach (Structure structure in Structure.WallList)
-        {
-          if (structure.DrawDamageEffect)
-          {
-            if (predicate != null)
-            {
-              if (!predicate(structure)) { continue; }
-            }
-            structure.DrawDamage(spriteBatch, damageEffect, editing);
-          }
-        }
+        s.DrawDamage(spriteBatch, damageEffect, editing);
       }
 
       return false;

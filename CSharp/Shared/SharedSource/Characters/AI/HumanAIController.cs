@@ -119,6 +119,7 @@ namespace CleanPatches
             }
             if (!isFleeing)
             {
+              _.CheckForDraggedCorpses();
               foreach (Character target in Character.CharacterList)
               {
                 if (target.CurrentHull != hull) { continue; }

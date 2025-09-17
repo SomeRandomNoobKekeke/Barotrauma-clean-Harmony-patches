@@ -207,6 +207,7 @@ namespace CleanPatches
 
       if (_.IsOutOfPower()) { __result = false; return false; }
 
+      _.ApplyStatusEffects(ActionType.OnUse, 1.0f, activator);
       if (_.IsToggle && (activator == null || _.lastUsed < Timing.TotalTime - 0.1))
       {
         if (GameMain.NetworkMember == null || GameMain.NetworkMember.IsServer)
@@ -223,7 +224,6 @@ namespace CleanPatches
       }
 
       _.lastUsed = Timing.TotalTime;
-      _.ApplyStatusEffects(ActionType.OnUse, 1.0f, activator);
 
       __result = true; return false;
     }

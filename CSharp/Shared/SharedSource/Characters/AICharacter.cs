@@ -57,7 +57,7 @@ namespace CleanPatches
       {
         enemyAi.PetBehavior?.Update(deltaTime);
       }
-      if (_.IsDead || _.Vitality <= 0.0f || _.Stun > 0.0f || _.IsIncapacitated)
+      if (_.IsDead || _.IsUnconscious || _.Stun > 0.0f || _.IsIncapacitated)
       {
         //don't enable simple physics on dead/incapacitated characters
         //the ragdoll controls the movement of incapacitated characters instead of the collider,
