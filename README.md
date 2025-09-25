@@ -9,7 +9,7 @@ If you need some method thats not here just ask me to convert it or make a pr, i
 ## Why???
 To reuse this code whenever i want to rewrite some old mod from scratch or start a new one that depends on these methods
 
-Also i merge all barotrauma changes here so i wouldn't have to check the whole barotrauma diff for each mod to see if i need to update it
+Also i merge all barotrauma changes here so i wouldn't have to check the whole barotrauma diff for each mod to see if i need to update
 
 ## How???
 Secret method:
