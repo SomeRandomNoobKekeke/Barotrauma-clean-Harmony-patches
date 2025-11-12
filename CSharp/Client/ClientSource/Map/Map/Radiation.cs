@@ -33,6 +33,7 @@ namespace CleanPatches
       );
     }
 
+    //https://github.com/FakeFishGames/Barotrauma/blob/51db93fabcb4751b11b79b8f55e6ef3c5f9afec9/Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs#L17
     public static void Radiation_Draw_Replace(Radiation __instance, ref bool __runOriginal, SpriteBatch spriteBatch, Rectangle container, float zoom)
     {
       __runOriginal = false;
@@ -81,6 +82,7 @@ namespace CleanPatches
       }
     }
 
+    //https://github.com/FakeFishGames/Barotrauma/blob/51db93fabcb4751b11b79b8f55e6ef3c5f9afec9/Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs#L17
     public static void Radiation_DrawFront_Replace(Radiation __instance, ref bool __runOriginal, SpriteBatch spriteBatch)
     {
       __runOriginal = false;
@@ -93,6 +95,7 @@ namespace CleanPatches
       }
     }
 
+    //https://github.com/FakeFishGames/Barotrauma/blob/51db93fabcb4751b11b79b8f55e6ef3c5f9afec9/Barotrauma/BarotraumaClient/ClientSource/Map/Map/Radiation.cs#L17
     public static void Radiation_MapUpdate_Replace(Radiation __instance, ref bool __runOriginal, float deltaTime)
     {
       __runOriginal = false;
