@@ -21,6 +21,16 @@ namespace CleanPatches
         original: typeof(Radiation).GetMethod("Draw", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_Draw_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Radiation).GetMethod("DrawFront", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_DrawFront_Replace"))
+      );
+
+      // harmony.Patch(
+      //   original: typeof(Radiation).GetMethod("Draw", AccessTools.all),
+      //   prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_Draw_Replace"))
+      // );
     }
 
     public static void Radiation_Draw_Replace(Radiation __instance, ref bool __runOriginal, SpriteBatch spriteBatch, Rectangle container, float zoom)
@@ -71,14 +81,17 @@ namespace CleanPatches
       }
     }
 
-    // public void DrawFront(SpriteBatch spriteBatch)
-    // {
-    //   if (radiationMultiplier is int multiplier)
-    //   {
-    //     var tooltip = TextManager.GetWithVariable("RadiationTooltip", "[jovianmultiplier]", multiplier.ToString());
-    //     GUIComponent.DrawToolTip(spriteBatch, tooltip, PlayerInput.MousePosition + new Vector2(18 * GUI.Scale));
-    //   }
-    // }
+    public static void Radiation_DrawFront_Replace(Radiation __instance, ref bool __runOriginal, SpriteBatch spriteBatch)
+    {
+      __runOriginal = false;
+      Radiation _ = __instance;
+
+      if (_.radiationMultiplier is int multiplier)
+      {
+        var tooltip = TextManager.GetWithVariable("RadiationTooltip", "[jovianmultiplier]", multiplier.ToString());
+        GUIComponent.DrawToolTip(spriteBatch, tooltip, PlayerInput.MousePosition + new Vector2(18 * GUI.Scale));
+      }
+    }
 
     // public void MapUpdate(float deltaTime)
     // {
