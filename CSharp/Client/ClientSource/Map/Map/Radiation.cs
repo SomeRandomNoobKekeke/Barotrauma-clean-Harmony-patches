@@ -27,10 +27,10 @@ namespace CleanPatches
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_DrawFront_Replace"))
       );
 
-      // harmony.Patch(
-      //   original: typeof(Radiation).GetMethod("Draw", AccessTools.all),
-      //   prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_Draw_Replace"))
-      // );
+      harmony.Patch(
+        original: typeof(Radiation).GetMethod("MapUpdate", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Radiation_MapUpdate_Replace"))
+      );
     }
 
     public static void Radiation_Draw_Replace(Radiation __instance, ref bool __runOriginal, SpriteBatch spriteBatch, Rectangle container, float zoom)
@@ -93,16 +93,19 @@ namespace CleanPatches
       }
     }
 
-    // public void MapUpdate(float deltaTime)
-    // {
-    //   float spriteStep = Params.BorderAnimationSpeed * deltaTime;
-    //   spriteIndex = (spriteIndex + spriteStep) % maxFrames;
+    public static void Radiation_MapUpdate_Replace(Radiation __instance, ref bool __runOriginal, float deltaTime)
+    {
+      __runOriginal = false;
+      Radiation _ = __instance;
 
-    //   if (increasedAmount > 0)
-    //   {
-    //     increasedAmount -= (lastIncrease / Params.AnimationSpeed) * deltaTime;
-    //   }
-    // }
+      float spriteStep = _.Params.BorderAnimationSpeed * deltaTime;
+      Radiation.spriteIndex = (Radiation.spriteIndex + spriteStep) % _.maxFrames;
+
+      if (_.increasedAmount > 0)
+      {
+        _.increasedAmount -= (_.lastIncrease / _.Params.AnimationSpeed) * deltaTime;
+      }
+    }
 
 
   }
