@@ -29,7 +29,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Events/Missions/AbandonedOutpostMission.cs#L255
+
     public static bool AbandonedOutpostMission_LoadHuman_Replace(AbandonedOutpostMission __instance, ref Character __result, HumanPrefab humanPrefab, XElement element, Submarine submarine)
     {
       AbandonedOutpostMission _ = __instance;

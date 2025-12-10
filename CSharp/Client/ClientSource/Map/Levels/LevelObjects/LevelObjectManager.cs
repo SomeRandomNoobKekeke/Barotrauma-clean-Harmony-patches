@@ -37,7 +37,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectManager.cs#L58
     public static bool LevelObjectManager_RefreshVisibleObjects_Replace(Rectangle currentIndices, float zoom, LevelObjectManager __instance)
     {
       LevelObjectManager _ = __instance;
@@ -131,7 +130,6 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObjectManager.cs#L171
     public static bool LevelObjectManager_DrawObjects_Replace(SpriteBatch spriteBatch, Camera cam, List<LevelObject> objectList, LevelObjectManager __instance)
     {
       LevelObjectManager _ = __instance;

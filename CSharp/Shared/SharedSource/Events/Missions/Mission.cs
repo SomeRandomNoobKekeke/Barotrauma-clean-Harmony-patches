@@ -33,7 +33,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Events/Missions/Mission.cs#L350
+
     public static bool Mission_LoadHuman_Replace(Mission __instance, ref Character __result, HumanPrefab humanPrefab, XElement element, Submarine submarine)
     {
       Mission _ = __instance;

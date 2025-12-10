@@ -51,7 +51,6 @@ namespace CleanPatches
       );
     }
 
-    //https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GameMain.cs#L1057
     public static bool GameMain_Draw_Replace(GameTime gameTime, GameMain __instance)
     {
       GameMain _ = __instance;
@@ -127,8 +126,6 @@ namespace CleanPatches
 
     // Note: it doesn't work in dll mods because of that base.Update(fixedTime);
     // -> don't use it in dll mods
-
-    //https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GameMain.cs#L692
     public static bool GameMain_Update_Replace(GameTime gameTime, GameMain __instance)
     {
       GameMain _ = __instance;

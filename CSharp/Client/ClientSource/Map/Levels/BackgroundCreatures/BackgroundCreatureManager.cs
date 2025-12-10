@@ -29,7 +29,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs#L124
+
     public static bool BackgroundCreatureManager_Update_Replace(float deltaTime, Camera cam, BackgroundCreatureManager __instance)
     {
       BackgroundCreatureManager _ = __instance;
@@ -75,7 +75,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/BackgroundCreatures/BackgroundCreatureManager.cs#L64
     public static bool BackgroundCreatureManager_SpawnCreatures_Replace(Level level, int count, Vector2? position, BackgroundCreatureManager __instance)
     {
       BackgroundCreatureManager _ = __instance;

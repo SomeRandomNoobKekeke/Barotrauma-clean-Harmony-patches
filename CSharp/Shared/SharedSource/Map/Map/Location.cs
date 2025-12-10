@@ -33,7 +33,7 @@ namespace CleanPatches
       );
     }
 
-    //https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Location.cs#L1072
+
     public static bool Location_IsCriticallyRadiated_Replace(ref bool __result, Location __instance)
     {
       if (GameMain.GameSession?.Map?.Radiation != null)

@@ -36,7 +36,6 @@ namespace CleanPatches
     }
 
     // Base call detected, you also need AIController_Update_Replace to run this
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/EnemyAIController.cs#L530
     public static bool EnemyAIController_Update_Replace(float deltaTime, EnemyAIController __instance)
     {
       EnemyAIController _ = __instance;

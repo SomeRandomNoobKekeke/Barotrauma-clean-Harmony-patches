@@ -31,7 +31,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/MotionSensor.cs#L188
     public static bool MotionSensor_Update_Replace(float deltaTime, Camera cam, MotionSensor __instance)
     {
       MotionSensor _ = __instance;

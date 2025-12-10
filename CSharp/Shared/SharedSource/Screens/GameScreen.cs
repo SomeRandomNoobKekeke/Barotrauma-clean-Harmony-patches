@@ -42,8 +42,6 @@ namespace CleanPatches
       );
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs#L46
     public static bool GameScreen_Select_Replace(GameScreen __instance)
     {
       GameScreen _ = __instance;
@@ -116,8 +114,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Screens/GameScreen.cs#L99
     public static bool GameScreen_Update_Replace(double deltaTime, GameScreen __instance)
     {
       GameScreen _ = __instance;

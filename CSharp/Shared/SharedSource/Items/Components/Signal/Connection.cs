@@ -29,7 +29,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Signal/Connection.cs#L311
     public static bool Connection_SendSignal_Replace(Signal signal, Connection __instance)
     {
       Connection _ = __instance;

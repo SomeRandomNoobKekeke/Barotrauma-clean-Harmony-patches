@@ -62,7 +62,6 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaClient/ClientSource/GameSession/CrewManager.cs#L1411
     public static bool CrewManager_CreateOrder_Replace(CrewManager __instance, ref bool __result, OrderPrefab orderPrefab, Hull targetHull = null)
     {
       CrewManager _ = __instance;
@@ -83,7 +82,6 @@ namespace CleanPatches
       __result = true; return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaClient/ClientSource/GameSession/CrewManager.cs#L1223
     public static void CrewManager_OnOrdersRearranged_Replace(CrewManager __instance, ref bool __runOriginal, GUIListBox orderList, object userData)
     {
       CrewManager _ = __instance;
@@ -99,7 +97,6 @@ namespace CleanPatches
       _.SetCharacterOrder(character, orderInfo.WithManualPriority(priority), isNewOrder: false);
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaClient/ClientSource/GameSession/CrewManager.cs#L964
     public static void CrewManager_AddCurrentOrderIcon_Replace(CrewManager __instance, ref bool __runOriginal, Character character, Order order)
     {
       CrewManager _ = __instance;
@@ -244,7 +241,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaClient/ClientSource/GameSession/CrewManager.cs#L1103
     public static void CrewManager_AddPreviousOrderIcon_Replace(CrewManager __instance, ref bool __runOriginal, Character character, GUIComponent characterComponent, Order orderInfo)
     {
       CrewManager _ = __instance;

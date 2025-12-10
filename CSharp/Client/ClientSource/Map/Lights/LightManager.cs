@@ -43,7 +43,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManager.cs#L684
     public static bool LightManager_UpdateObstructVision_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, Camera cam, Vector2 lookAtPosition, LightManager __instance)
     {
       LightManager _ = __instance;
@@ -179,7 +178,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManager.cs#L246
     public static bool LightManager_RenderLightMap_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, Camera cam, RenderTarget2D backgroundObstructor, LightManager __instance)
     {
       LightManager _ = __instance;
@@ -505,8 +503,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightManager.cs#L555
     public static bool LightManager_UpdateHighlights_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, Matrix spriteBatchTransform, Camera cam, LightManager __instance, ref bool __result)
     {
       LightManager _ = __instance;

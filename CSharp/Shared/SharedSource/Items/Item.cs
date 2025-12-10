@@ -59,7 +59,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L2299
     public static bool Item_Update_Replace(float deltaTime, Camera cam, Item __instance)
     {
       Item _ = __instance;
@@ -241,8 +240,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L3233
     public static bool Item_Use_Replace(Item __instance, float deltaTime, Character user = null, Limb targetLimb = null, Entity useTarget = null, Character userForOnUsedEvent = null)
     {
       Item _ = __instance;
@@ -287,7 +284,6 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs#L2946
     public static bool Item_SendSignal_Replace(Signal signal, Connection connection, Item __instance)
     {
       Item _ = __instance;

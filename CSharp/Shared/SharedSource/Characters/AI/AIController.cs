@@ -35,7 +35,7 @@ namespace CleanPatches
       // );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/AIController.cs#L160
+
     public static bool AIController_Update_Replace(float deltaTime, AIController __instance)
     {
       if (__instance.hullVisibilityTimer > 0)

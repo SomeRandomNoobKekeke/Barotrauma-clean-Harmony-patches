@@ -35,8 +35,6 @@ namespace CleanPatches
       );
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/GameSession/GameSession.cs#L1044
     public static bool GameSession_Update_Replace(float deltaTime, GameSession __instance)
     {
       GameSession _ = __instance;

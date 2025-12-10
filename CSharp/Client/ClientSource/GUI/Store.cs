@@ -33,7 +33,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GUI/Store.cs#L2270
     public static bool Store_Update_Replace(float deltaTime, Store __instance)
     {
       Store _ = __instance;

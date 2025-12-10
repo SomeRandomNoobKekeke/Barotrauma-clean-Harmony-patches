@@ -29,7 +29,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/Particle.cs#L575
     public static bool Particle_Draw_Replace(SpriteBatch spriteBatch, Particle __instance)
     {
       Particle _ = __instance;

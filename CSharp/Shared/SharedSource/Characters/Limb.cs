@@ -46,7 +46,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Limb.cs#L784
+
     public static bool Limb_AddDamage_Replace(Vector2 simPosition, IEnumerable<Affliction> afflictions, bool playSound, float damageMultiplier, float penetration, Character attacker, Limb __instance, ref AttackResult __result)
     {
       Limb _ = __instance;

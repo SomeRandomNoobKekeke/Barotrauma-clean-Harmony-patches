@@ -32,7 +32,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/Objectives/AIObjectiveManager.cs#L799
     public static bool AIObjectiveManager_GetOrderPriority_Replace(AIObjectiveManager __instance, ref float __result, AIObjective objective)
     {
       AIObjectiveManager _ = __instance;

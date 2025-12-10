@@ -36,7 +36,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Controller.cs#L223
     public static bool Controller_Update_Replace(float deltaTime, Camera cam, Controller __instance)
     {
       Controller _ = __instance;
@@ -190,7 +189,6 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Machines/Controller.cs#L373
     public static bool Controller_Use_Replace(Controller __instance, ref bool __result, float deltaTime, Character activator = null)
     {
       Controller _ = __instance;

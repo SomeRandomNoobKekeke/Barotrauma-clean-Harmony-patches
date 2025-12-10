@@ -36,7 +36,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/StatusEffects/StatusEffect.cs#L2661
     public static bool StatusEffect_UpdateAll_Replace(float deltaTime)
     {
 #if CLIENT

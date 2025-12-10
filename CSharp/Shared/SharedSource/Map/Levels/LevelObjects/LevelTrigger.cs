@@ -35,7 +35,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Levels/LevelObjects/LevelTrigger.cs#L545
+
     public static bool LevelTrigger_Update_Replace(float deltaTime, LevelTrigger __instance)
     {
       LevelTrigger _ = __instance;

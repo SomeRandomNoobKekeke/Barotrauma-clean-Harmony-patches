@@ -31,8 +31,6 @@ namespace CleanPatches
       );
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Power/Powered.cs#L425
     public static bool Powered_UpdatePower_Replace(float deltaTime)
     {
       //Don't update the power if the round is ending

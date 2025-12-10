@@ -38,7 +38,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Radiation.cs#L47
     public static bool Radiation_OnStep_Replace(Radiation __instance, float steps = 1)
     {
       Radiation _ = __instance;
@@ -87,8 +86,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Map/Radiation.cs#L97
     public static bool Radiation_UpdateRadiation_Replace(Radiation __instance, float deltaTime)
     {
       Radiation _ = __instance;

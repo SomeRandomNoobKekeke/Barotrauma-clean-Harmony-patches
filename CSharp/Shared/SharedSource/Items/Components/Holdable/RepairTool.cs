@@ -42,7 +42,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L185
     public static bool RepairTool_Use_Replace(RepairTool __instance, ref bool __result, float deltaTime, Character character = null)
     {
       RepairTool _ = __instance;
@@ -179,8 +178,6 @@ namespace CleanPatches
       __result = true; return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L321
     public static bool RepairTool_Repair_Replace(RepairTool __instance, Vector2 rayStart, Vector2 rayEnd, float deltaTime, Character user, float degreeOfSuccess, List<Body> ignoredBodies)
     {
       RepairTool _ = __instance;
@@ -409,8 +406,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Holdable/RepairTool.cs#L545
     public static bool RepairTool_FixBody_Replace(RepairTool __instance, ref bool __result, Character user, Vector2 hitPosition, float deltaTime, float degreeOfSuccess, Body targetBody)
     {
       RepairTool _ = __instance;

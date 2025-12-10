@@ -33,7 +33,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Characters/Animation/Ragdoll.cs#L377
     public static void Ragdoll_PlayImpactSound_Replace(Ragdoll __instance, ref bool __runOriginal, Limb limb)
     {
       Ragdoll _ = __instance;

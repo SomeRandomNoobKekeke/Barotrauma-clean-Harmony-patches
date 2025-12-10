@@ -53,7 +53,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Structure.cs#L968
+
     public static bool Structure_AddDamage_Replace(Structure __instance, int sectionIndex, float damage, Character attacker = null, bool emitParticles = true, bool createWallDamageProjectiles = false)
     {
       Structure _ = __instance;
@@ -102,9 +102,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    //TODO i didn't test it in multiplayer
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Structure.cs#L1171
     public static bool Structure_SetDamage_Replace(Structure __instance, int sectionIndex, float damage, Character attacker = null,
               bool createNetworkEvent = true,
               bool isNetworkEvent = true,

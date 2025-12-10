@@ -36,7 +36,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/HumanAIController.cs#L1017
     public static void HumanAIController_ReportProblems_Replace(HumanAIController __instance, ref bool __runOriginal)
     {
       HumanAIController _ = __instance;
@@ -173,7 +172,6 @@ namespace CleanPatches
 
 
     // Base call detected, you also need AIController_Update_Replace to run this
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/HumanAIController.cs#L193
     public static bool HumanAIController_Update_Replace(float deltaTime, HumanAIController __instance)
     {
       HumanAIController _ = __instance;

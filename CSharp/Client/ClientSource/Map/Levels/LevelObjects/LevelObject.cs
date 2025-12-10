@@ -35,7 +35,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelObjects/LevelObject.cs#L170
+
     public static bool LevelObject_Update_Replace(LevelObject __instance, float deltaTime, Camera cam)
     {
       LevelObject _ = __instance;

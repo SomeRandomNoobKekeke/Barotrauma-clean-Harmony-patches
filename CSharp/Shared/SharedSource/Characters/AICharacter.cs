@@ -44,7 +44,6 @@ namespace CleanPatches
 
     // ACHTUNG! Base call detected!
     // if you want this then you also need Character_Update_Replace
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/AICharacter.cs#L36
     public static bool AICharacter_Update_Replace(float deltaTime, Camera cam, AICharacter __instance)
     {
       AICharacter _ = __instance;

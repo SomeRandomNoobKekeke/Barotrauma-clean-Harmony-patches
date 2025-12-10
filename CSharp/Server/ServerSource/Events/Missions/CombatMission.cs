@@ -26,7 +26,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaServer/ServerSource/Events/Missions/CombatMission.cs#L92
+
     public static void CombatMission_CheckTeamCharacters_Replace(CombatMission __instance, ref bool __runOriginal)
     {
       CombatMission _ = __instance;

@@ -39,7 +39,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Turret.cs#L438
     public static bool Turret_Update_Replace(float deltaTime, Camera cam, Turret __instance)
     {
       Turret _ = __instance;
@@ -207,8 +206,6 @@ namespace CleanPatches
       return false;
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/Turret.cs#L991
     public static bool Turret_UpdateAutoOperate_Replace(Turret __instance, float deltaTime, bool ignorePower, Identifier friendlyTag = default)
     {
       Turret _ = __instance;

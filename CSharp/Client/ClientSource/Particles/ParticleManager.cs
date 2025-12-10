@@ -50,7 +50,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L183
+
     public static bool ParticleManager_Update_Replace(float deltaTime, ParticleManager __instance)
     {
       ParticleManager _ = __instance;
@@ -77,7 +77,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L101
+
     public static bool ParticleManager_CreateParticle_Replace(ParticleManager __instance, ref Particle __result, ParticlePrefab prefab, Vector2 position, Vector2 velocity, float rotation = 0.0f, Hull hullGuess = null, ParticleDrawOrder drawOrder = ParticleDrawOrder.Default, float collisionIgnoreTimer = 0f, float lifeTimeMultiplier = 1f, Tuple<Vector2, Vector2> tracerPoints = null)
     {
       ParticleManager _ = __instance;
@@ -135,7 +135,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Particles/ParticleManager.cs#L223
     public static bool ParticleManager_Draw_Replace(ParticleManager __instance, SpriteBatch spriteBatch, bool inWater, bool? inSub, ParticleBlendState blendState, bool? background = false)
     {
       ParticleManager _ = __instance;

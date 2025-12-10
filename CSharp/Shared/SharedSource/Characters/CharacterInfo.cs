@@ -34,7 +34,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/CharacterInfo.cs#L592
+
     public static bool CharacterInfo_GetManualOrderPriority_Replace(CharacterInfo __instance, ref int __result, Order order)
     {
       CharacterInfo _ = __instance;

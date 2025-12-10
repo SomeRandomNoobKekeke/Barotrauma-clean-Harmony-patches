@@ -31,7 +31,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/MapEntity.cs#L616
     public static bool MapEntity_UpdateAll_Replace(float deltaTime, Camera cam)
     {
       MapEntity.mapEntityUpdateTick++;

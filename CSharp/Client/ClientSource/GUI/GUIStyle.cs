@@ -27,7 +27,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GUI/GUIStyle.cs#L204
     public static bool GUIStyle_Apply_Replace(GUIComponent targetComponent, Identifier styleName, GUIComponent parent)
     {
       GUIComponentStyle componentStyle;

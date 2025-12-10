@@ -35,7 +35,7 @@ namespace CleanPatches
 
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaClient/ClientSource/GameSession/HintManager.cs#L537
+
     public static void HintManager_OnStartedControlling_Replace()
     {
       if (Level.IsLoadedOutpost) { return; }

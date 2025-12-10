@@ -114,7 +114,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelRenderer.cs#L241
+
     public static bool LevelRenderer_DrawBackground_Replace(
                 LevelRenderer __instance,
                 SpriteBatch spriteBatch, Camera cam,
@@ -221,7 +221,7 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelRenderer.cs#L341
+
     public static bool LevelRenderer_DrawForeground_Replace(LevelRenderer __instance, SpriteBatch spriteBatch, Camera cam, LevelObjectManager backgroundSpriteManager = null)
     {
       spriteBatch.Begin(SpriteSortMode.Deferred,

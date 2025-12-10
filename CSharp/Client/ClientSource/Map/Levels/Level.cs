@@ -37,7 +37,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs#L124
     public static bool Level_DrawBack_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, Camera cam, Level __instance)
     {
       Level _ = __instance;
@@ -59,7 +58,7 @@ namespace CleanPatches
       return false;
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/Level.cs#L141
+
     public static bool Level_DrawFront_Replace(SpriteBatch spriteBatch, Camera cam, Level __instance)
     {
       __instance.renderer?.DrawForeground(spriteBatch, cam, __instance.LevelObjectManager);

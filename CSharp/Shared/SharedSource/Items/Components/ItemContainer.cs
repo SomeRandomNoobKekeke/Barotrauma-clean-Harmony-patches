@@ -34,7 +34,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Components/ItemContainer.cs#L576
     public static bool ItemContainer_Update_Replace(ItemContainer __instance, float deltaTime, Camera cam)
     {
       ItemContainer _ = __instance;

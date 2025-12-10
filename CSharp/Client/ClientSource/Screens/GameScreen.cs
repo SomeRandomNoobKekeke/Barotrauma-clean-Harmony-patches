@@ -48,7 +48,6 @@ namespace CleanPatches
 
     // Note: if you test this in sub editor and see no effect then it's because it's a SubEditorScreen
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs#L98
     public static bool GameScreen_Draw_Replace(double deltaTime, GraphicsDevice graphics, SpriteBatch spriteBatch, GameScreen __instance)
     {
       GameScreen _ = __instance;
@@ -113,7 +112,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs#L157
     public static bool GameScreen_DrawPositionIndicators_Replace(SpriteBatch spriteBatch, GameScreen __instance)
     {
       GameScreen _ = __instance;
@@ -230,7 +228,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Screens/GameScreen.cs#L268
+
     public static bool GameScreen_DrawMap_Replace(GraphicsDevice graphics, SpriteBatch spriteBatch, double deltaTime, GameScreen __instance)
     {
       GameScreen _ = __instance;

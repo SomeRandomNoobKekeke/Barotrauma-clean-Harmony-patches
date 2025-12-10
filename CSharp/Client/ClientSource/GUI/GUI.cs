@@ -41,7 +41,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/GUI/GUI.cs#L253
     public static bool GUI_Draw_Replace(Camera cam, SpriteBatch spriteBatch)
     {
       lock (GUI.mutex)

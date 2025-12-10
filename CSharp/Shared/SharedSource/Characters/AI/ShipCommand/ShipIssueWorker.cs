@@ -26,7 +26,6 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/AI/ShipCommand/ShipIssueWorker.cs#L47
     public static void ShipIssueWorker_SetOrder_Replace(ShipIssueWorker __instance, ref bool __runOriginal, Character orderedCharacter)
     {
       ShipIssueWorker _ = __instance;

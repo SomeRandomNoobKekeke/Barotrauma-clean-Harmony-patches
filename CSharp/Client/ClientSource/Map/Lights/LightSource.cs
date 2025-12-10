@@ -33,8 +33,6 @@ namespace CleanPatches
 
     }
 
-
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Lights/LightSource.cs#L1460
     public static bool LightSource_DrawLightVolume_Replace(SpriteBatch spriteBatch, BasicEffect lightEffect, Matrix transform, bool allowRecalculation, ref int recalculationCount, LightSource __instance)
     {
       LightSource _ = __instance;

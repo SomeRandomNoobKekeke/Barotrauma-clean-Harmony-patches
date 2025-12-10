@@ -32,7 +32,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Events/EventManager.cs#L804
+
     public static bool EventManager_Update_Replace(EventManager __instance, float deltaTime)
     {
       EventManager _ = __instance;

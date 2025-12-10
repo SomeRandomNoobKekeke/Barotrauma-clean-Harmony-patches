@@ -39,7 +39,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Map/Levels/Level.cs#L3572
+
     public static bool Level_Update_Replace(float deltaTime, Camera cam, Level __instance)
     {
       Level _ = __instance;
