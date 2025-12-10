@@ -60,9 +60,139 @@ namespace CleanPatches
         original: typeof(Character).GetMethod("Control", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_Control_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Character).GetMethod("CanInteractWith", AccessTools.all, new Type[]{
+          typeof(Character),
+          typeof(float),
+          typeof(bool),
+          typeof(bool),
+        }),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_CanInteractWith_Replace"))
+      );
+
+      harmony.Patch(
+        original: typeof(Character).GetMethod("DamageLimb", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_DamageLimb_Replace"))
+      );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L307
+    public static bool Character_DamageLimb_Replace(Character __instance, ref AttackResult __result, Vector2 worldPosition, Limb hitLimb, IEnumerable<Affliction> afflictions, float stun, bool playSound, Vector2 attackImpulse, Character attacker = null, float damageMultiplier = 1, bool allowStacking = true, float penetration = 0f, bool shouldImplode = false, bool ignoreDamageOverlay = false, bool recalculateVitality = true)
+    {
+      Character _ = __instance;
+
+
+      if (_.Removed) { __result = new AttackResult(); return false; }
+
+      AttackResult? retAttackResult = GameMain.LuaCs.Hook.Call<AttackResult?>("character.damageLimb", _, worldPosition, hitLimb, afflictions, stun, playSound, attackImpulse, attacker, damageMultiplier, allowStacking, penetration, shouldImplode);
+      if (retAttackResult != null)
+      {
+        __result = retAttackResult.Value; return false;
+      }
+
+      _.SetStun(stun);
+
+      if (attacker != null && attacker != _ &&
+          attacker.IsOnPlayerTeam &&
+          GameMain.NetworkMember != null &&
+          !GameMain.NetworkMember.ServerSettings.AllowFriendlyFire)
+      {
+        if (attacker.TeamID == _.TeamID)
+        {
+          if (afflictions.None(a => a.Prefab.IsBuff)) { __result = new AttackResult(); return false; }
+        }
+      }
+
+      Vector2 dir = hitLimb.WorldPosition - worldPosition;
+      if (attackImpulse.LengthSquared() > 0.0f)
+      {
+        Vector2 diff = dir;
+        if (diff == Vector2.Zero) { diff = Rand.Vector(1.0f); }
+        Vector2 hitPos = hitLimb.SimPosition + ConvertUnits.ToSimUnits(diff);
+        hitLimb.body.ApplyLinearImpulse(attackImpulse, hitPos, maxVelocity: NetConfig.MaxPhysicsBodyVelocity * 0.5f);
+        var mainLimb = hitLimb.character.AnimController.MainLimb;
+        if (hitLimb != mainLimb)
+        {
+          // Always add force to mainlimb
+          mainLimb.body.ApplyLinearImpulse(attackImpulse, hitPos, maxVelocity: NetConfig.MaxPhysicsBodyVelocity);
+        }
+      }
+      bool wasDead = _.IsDead;
+      Vector2 simPos = hitLimb.SimPosition + ConvertUnits.ToSimUnits(dir);
+      AttackResult attackResult = hitLimb.AddDamage(simPos, afflictions, playSound, damageMultiplier: damageMultiplier, penetration: penetration, attacker: attacker);
+      _.CharacterHealth.ApplyDamage(hitLimb, attackResult, allowStacking, recalculateVitality);
+      if (shouldImplode)
+      {
+        // Only used by assistant's True Potential talent. Has to run here in order to properly give kill credit when it activates.
+        _.Implode();
+      }
+
+      if (attacker != _)
+      {
+        bool wasDamageOverlayVisible = _.CharacterHealth.ShowDamageOverlay;
+        if (ignoreDamageOverlay)
+        {
+          // Temporarily ignore damage overlay (husk transition damage)
+          _.CharacterHealth.ShowDamageOverlay = false;
+        }
+        _.OnAttacked?.Invoke(attacker, attackResult);
+        _.OnAttackedProjSpecific(attacker, attackResult, stun);
+        // Reset damage overlay
+        _.CharacterHealth.ShowDamageOverlay = wasDamageOverlayVisible;
+        if (!wasDead)
+        {
+          _.TryAdjustAttackerSkill(attacker, attackResult);
+        }
+      }
+      if (attackResult.Damage > 0)
+      {
+        _.LastDamage = attackResult;
+        if (attacker != null && attacker != _ && !attacker.Removed)
+        {
+          _.AddAttacker(attacker, attackResult.Damage);
+          if (_.IsOnPlayerTeam)
+          {
+            CreatureMetrics.AddEncounter(attacker.SpeciesName);
+          }
+          if (attacker.IsOnPlayerTeam)
+          {
+            CreatureMetrics.AddEncounter(_.SpeciesName);
+          }
+        }
+        _.ApplyStatusEffects(ActionType.OnDamaged, 1.0f);
+        hitLimb.ApplyStatusEffects(ActionType.OnDamaged, 1.0f);
+      }
+#if CLIENT
+      if (_.Params.UseBossHealthBar && Character.Controlled != null && Character.Controlled.teamID == attacker?.teamID)
+      {
+          CharacterHUD.ShowBossHealthBar(_, attackResult.Damage);
+      }
+#endif
+      __result = attackResult; return false;
+    }
+
+
+    public static bool Character_CanInteractWith_Replace(Character __instance, ref bool __result, Character c, float maxDist = 200.0f, bool checkVisibility = true, bool skipDistanceCheck = false)
+    {
+      Character _ = __instance;
+
+      if (c == _ || _.Removed || !c.Enabled || !c.CanBeSelected || c.InvisibleTimer > 0.0f) { __result = false; return false; }
+      if (!c.CharacterHealth.UseHealthWindow && !c.IsDraggable && (c.onCustomInteract == null || !c.AllowCustomInteract)) { __result = false; return false; }
+
+      if (!skipDistanceCheck)
+      {
+        maxDist = Math.Max(ConvertUnits.ToSimUnits(maxDist), c.AnimController.Collider.GetMaxExtent());
+        if (Vector2.DistanceSquared(_.SimPosition, c.SimPosition) > maxDist * maxDist &&
+            Vector2.DistanceSquared(_.SimPosition, c.AnimController.MainLimb.SimPosition) > maxDist * maxDist)
+        {
+          __result = false; return false;
+        }
+      }
+
+      __result = !checkVisibility || _.CanSeeTarget(c); return false;
+    }
+
+
     public static void Character_ChangeTeam_Replace(Character __instance, ref bool __runOriginal, CharacterTeamType newTeam)
     {
       Character _ = __instance;
@@ -88,7 +218,6 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/ad837423a8d71666dc0a5621713e2ab1fe7e2802/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L363
     public static void Character_UpdateTeam_Replace(Character __instance, ref bool __runOriginal)
     {
       Character _ = __instance;
@@ -123,20 +252,24 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L3366
-    public static bool Character_UpdateAll_Replace(float deltaTime, Camera cam)
+    public static void Character_UpdateAll_Replace(float deltaTime, Camera cam)
     {
-      if (GameMain.NetworkMember == null || !GameMain.NetworkMember.IsClient)
+      if (GameMain.NetworkMember == null || !GameMain.NetworkMember.IsClient) // single player or server
       {
         foreach (Character c in Character.CharacterList)
         {
-          if (c is not AICharacter && !c.IsRemotePlayer) { continue; }
-
-          if (c.IsPlayer || (c.IsBot && !c.IsDead))
+          // TODO: The logic below seems to be overly complicated and quite confusing
+          if (c is not AICharacter && !c.IsRemotePlayer) { continue; } // confusing -> what this line is intended for? local player? But that's handled below...
+          if (c.IsRemotePlayer)
+          {
+            // Let the client tell when to enable the character. If we force it enabled here, it may e.g. get killed while still loading a round.
+            continue;
+          }
+          if (c.IsLocalPlayer || (c.IsBot && !c.IsDead))
           {
             c.Enabled = true;
           }
-          else if (GameMain.NetworkMember != null && GameMain.NetworkMember.IsServer)
+          else if (GameMain.NetworkMember != null && GameMain.NetworkMember.IsServer) // mp server
           {
             //disable AI characters that are far away from all clients and the host's character and not controlled by anyone
             float closestPlayerDist = c.GetDistanceToClosestPlayer();
@@ -153,7 +286,7 @@ namespace CleanPatches
               c.Enabled = true;
             }
           }
-          else if (Submarine.MainSub != null)
+          else if (Submarine.MainSub != null) // sp only?
           {
             //disable AI characters that are far away from the sub and the controlled character
             float distSqr = Vector2.DistanceSquared(Submarine.MainSub.WorldPosition, c.WorldPosition);
@@ -182,35 +315,19 @@ namespace CleanPatches
         }
       }
 
-      Character.characterUpdateTick++;
-
-      if (Character.characterUpdateTick % Character.CharacterUpdateInterval == 0)
+      foreach (Character character in Character.CharacterList)
       {
-        for (int i = 0; i < Character.CharacterList.Count; i++)
-        {
-          if (GameMain.LuaCs.Game.UpdatePriorityCharacters.Contains(Character.CharacterList[i])) continue;
-
-          Character.CharacterList[i].Update(deltaTime * Character.CharacterUpdateInterval, cam);
-        }
-      }
-
-      foreach (Character character in GameMain.LuaCs.Game.UpdatePriorityCharacters)
-      {
-        if (character.Removed) { continue; }
-
+        Debug.Assert(character is { Removed: false });
         character.Update(deltaTime, cam);
       }
 
 #if CLIENT
       Character.UpdateSpeechBubbles(deltaTime);
 #endif
-
-      return false;
     }
 
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L3450
     public static bool Character_Update_Replace(Character __instance, float deltaTime, Camera cam)
     {
       Character _ = __instance;
@@ -497,7 +614,7 @@ namespace CleanPatches
     }
 
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Characters/Character.cs#L2154
+
     public static bool Character_Control_Replace(Character __instance, float deltaTime, Camera cam)
     {
       Character _ = __instance;

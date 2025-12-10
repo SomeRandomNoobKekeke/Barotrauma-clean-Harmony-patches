@@ -42,8 +42,7 @@ namespace CleanPatches
       );
     }
 
-    // https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaClient/ClientSource/Map/Levels/LevelRenderer.cs#L149
-    public static bool LevelRenderer_Update_Replace(float deltaTime, Camera cam, LevelRenderer __instance)
+    public static bool LevelRenderer_Update_Replace(LevelRenderer __instance, float deltaTime, Camera cam)
     {
       LevelRenderer _ = __instance;
 
@@ -100,15 +99,9 @@ namespace CleanPatches
 
       WaterRenderer.Instance?.ScrollWater(_.waterParticleVelocity, deltaTime);
 
-      if (_.level.GenerationParams.WaterParticles != null)
-      {
-        Vector2 waterTextureSize = _.level.GenerationParams.WaterParticles.size * _.level.GenerationParams.WaterParticleScale;
-        _.waterParticleOffset += new Vector2(_.waterParticleVelocity.X, -_.waterParticleVelocity.Y) * _.level.GenerationParams.WaterParticleScale * deltaTime;
-        while (_.waterParticleOffset.X <= -waterTextureSize.X) { _.waterParticleOffset.X += waterTextureSize.X; }
-        while (_.waterParticleOffset.X >= waterTextureSize.X) { _.waterParticleOffset.X -= waterTextureSize.X; }
-        while (_.waterParticleOffset.Y <= -waterTextureSize.Y) { _.waterParticleOffset.Y += waterTextureSize.Y; }
-        while (_.waterParticleOffset.Y >= waterTextureSize.Y) { _.waterParticleOffset.Y -= waterTextureSize.Y; }
-      }
+      Vector2 waterParticleOffsetProxy = Vector2.Zero;
+      _.level.GenerationParams.UpdateWaterParticleOffset(ref waterParticleOffsetProxy, _.waterParticleVelocity, deltaTime);
+      _.waterParticleOffset = waterParticleOffsetProxy;
 
       return false;
     }
@@ -126,34 +119,7 @@ namespace CleanPatches
 
       spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearWrap);
 
-      Vector2 backgroundPos = cam.WorldViewCenter;
-
-      backgroundPos.Y = -backgroundPos.Y;
-      backgroundPos *= 0.05f;
-
-      if (_.level.GenerationParams.BackgroundTopSprite != null)
-      {
-        int backgroundSize = (int)_.level.GenerationParams.BackgroundTopSprite.size.Y;
-        if (backgroundPos.Y < backgroundSize)
-        {
-          if (backgroundPos.Y < 0)
-          {
-            var backgroundTop = _.level.GenerationParams.BackgroundTopSprite;
-            backgroundTop.SourceRect = new Rectangle((int)backgroundPos.X, (int)backgroundPos.Y, backgroundSize, (int)Math.Min(-backgroundPos.Y, backgroundSize));
-            backgroundTop.DrawTiled(spriteBatch, Vector2.Zero, new Vector2(GameMain.GraphicsWidth, Math.Min(-backgroundPos.Y, GameMain.GraphicsHeight)),
-                color: _.level.BackgroundTextureColor);
-          }
-          if (-backgroundPos.Y < GameMain.GraphicsHeight && _.level.GenerationParams.BackgroundSprite != null)
-          {
-            var background = _.level.GenerationParams.BackgroundSprite;
-            background.SourceRect = new Rectangle((int)backgroundPos.X, (int)Math.Max(backgroundPos.Y, 0), backgroundSize, backgroundSize);
-            background.DrawTiled(spriteBatch,
-                (backgroundPos.Y < 0) ? new Vector2(0.0f, (int)-backgroundPos.Y) : Vector2.Zero,
-                new Vector2(GameMain.GraphicsWidth, (int)Math.Min(Math.Ceiling(backgroundSize - backgroundPos.Y), backgroundSize)),
-                color: _.level.BackgroundTextureColor);
-          }
-        }
-      }
+      _.level.GenerationParams.DrawBackgrounds(spriteBatch, cam);
 
       spriteBatch.End();
 
@@ -168,42 +134,7 @@ namespace CleanPatches
         backgroundCreatureManager?.Draw(spriteBatch, cam);
       }
 
-      if (_.level.GenerationParams.WaterParticles != null && cam.Zoom > 0.05f)
-      {
-        float textureScale = _.level.GenerationParams.WaterParticleScale;
-
-        Rectangle srcRect = new Rectangle(0, 0, 2048, 2048);
-        Vector2 origin = new Vector2(cam.WorldView.X, -cam.WorldView.Y);
-        Vector2 offset = -origin + _.waterParticleOffset;
-        while (offset.X <= -srcRect.Width * textureScale) offset.X += srcRect.Width * textureScale;
-        while (offset.X > 0.0f) offset.X -= srcRect.Width * textureScale;
-        while (offset.Y <= -srcRect.Height * textureScale) offset.Y += srcRect.Height * textureScale;
-        while (offset.Y > 0.0f) offset.Y -= srcRect.Height * textureScale;
-        for (int i = 0; i < 4; i++)
-        {
-          float scale = (1.0f - i * 0.2f);
-
-          //alpha goes from 1.0 to 0.0 when scale is in the range of 0.1 - 0.05
-          float alpha = (cam.Zoom * scale) < 0.1f ? (cam.Zoom * scale - 0.05f) * 20.0f : 1.0f;
-          if (alpha <= 0.0f) continue;
-
-          Vector2 offsetS = offset * scale
-              + new Vector2(cam.WorldView.Width, cam.WorldView.Height) * (1.0f - scale) * 0.5f
-              - new Vector2(256.0f * i);
-
-          float texScale = scale * textureScale;
-
-          while (offsetS.X <= -srcRect.Width * texScale) offsetS.X += srcRect.Width * texScale;
-          while (offsetS.X > 0.0f) offsetS.X -= srcRect.Width * texScale;
-          while (offsetS.Y <= -srcRect.Height * texScale) offsetS.Y += srcRect.Height * texScale;
-          while (offsetS.Y > 0.0f) offsetS.Y -= srcRect.Height * texScale;
-
-          _.level.GenerationParams.WaterParticles.DrawTiled(
-              spriteBatch, origin + offsetS,
-              new Vector2(cam.WorldView.Width - offsetS.X, cam.WorldView.Height - offsetS.Y),
-              color: _.level.GenerationParams.WaterParticleColor * alpha, textureScale: new Vector2(texScale));
-        }
-      }
+      _.level.GenerationParams.DrawWaterParticles(spriteBatch, cam, _.waterParticleOffset);
 
       GameMain.ParticleManager?.Draw(spriteBatch, inWater: true, inSub: false, ParticleBlendState.AlphaBlend, background: true);
 

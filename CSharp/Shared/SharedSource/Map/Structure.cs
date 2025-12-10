@@ -252,11 +252,11 @@ namespace CleanPatches
         float gapOpen = 0;
         if (damageRatio > Structure.BigGapThreshold)
         {
-          gapOpen = MathHelper.Lerp(0.35f, 0.75f, MathUtils.InverseLerp(Structure.BigGapThreshold, 1.0f, damageRatio));
+          gapOpen = MathHelper.Lerp(Structure.SmallGapOpenness, Structure.LargeGapOpenness, MathUtils.InverseLerp(Structure.BigGapThreshold, 1.0f, damageRatio));
         }
         else if (damageRatio > Structure.LeakThreshold)
         {
-          gapOpen = MathHelper.Lerp(0f, 0.35f, MathUtils.InverseLerp(Structure.LeakThreshold, Structure.BigGapThreshold, damageRatio));
+          gapOpen = MathHelper.Lerp(0f, Structure.SmallGapOpenness, MathUtils.InverseLerp(Structure.LeakThreshold, Structure.BigGapThreshold, damageRatio));
         }
         gap.Open = gapOpen;
 
@@ -275,20 +275,22 @@ namespace CleanPatches
       _.Sections[sectionIndex].damage = MathHelper.Clamp(damage, 0.0f, _.MaxHealth);
       _.HasDamage = _.Sections.Any(s => s.damage > 0.0f);
 
-      if (attacker != null && damageDiff != 0.0f)
+      if (damageDiff != 0.0f)
       {
-        HumanAIController.StructureDamaged(_, damageDiff, attacker);
-
-#if SERVER
-        _.OnHealthChangedProjSpecific(attacker, damageDiff);
-#endif
-
-        if (GameMain.NetworkMember == null || !GameMain.NetworkMember.IsClient)
+        _.OnHealthChanged?.Invoke(attacker, damageDiff);
+        if (attacker != null)
         {
-          if (damageDiff < 0.0f)
+          HumanAIController.StructureDamaged(_, damageDiff, attacker);
+#if SERVER // not compiled on client
+          _.OnHealthChangedProjSpecific(attacker, damageDiff);
+#endif
+          if (GameMain.NetworkMember == null || !GameMain.NetworkMember.IsClient)
           {
-            attacker.Info?.ApplySkillGain(Barotrauma.Tags.MechanicalSkill,
-                -damageDiff * SkillSettings.Current.SkillIncreasePerRepairedStructureDamage);
+            if (damageDiff < 0.0f)
+            {
+              attacker.Info?.ApplySkillGain(Barotrauma.Tags.MechanicalSkill,
+                  -damageDiff * SkillSettings.Current.SkillIncreasePerRepairedStructureDamage);
+            }
           }
         }
       }
