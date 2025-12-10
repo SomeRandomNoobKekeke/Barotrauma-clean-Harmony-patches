@@ -63,7 +63,7 @@ namespace CleanPatches
     {
       Item _ = __instance;
 
-      if (!_.isActive || _.IsLayerHidden || _.IsInRemoveQueue) { return false; }
+      if (!_.IsActive || _.IsLayerHidden || _.IsInRemoveQueue) { return false; }
 
       if (_.impactQueue != null)
       {
@@ -234,7 +234,7 @@ namespace CleanPatches
 #if CLIENT
         _.positionBuffer.Clear();
 #endif
-        _.isActive = false;
+        _.IsActive = false;
       }
 
       return false;
