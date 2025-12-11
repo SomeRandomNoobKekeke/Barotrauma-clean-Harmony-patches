@@ -315,15 +315,15 @@ namespace CleanPatches
         }
       }
 
-      characterUpdateTick++;
+      Character.characterUpdateTick++;
 
-      if (characterUpdateTick % CharacterUpdateInterval == 0)
+      if (Character.characterUpdateTick % Character.CharacterUpdateInterval == 0)
       {
-        for (int i = 0; i < CharacterList.Count; i++)
+        for (int i = 0; i < Character.CharacterList.Count; i++)
         {
-          if (GameMain.LuaCs.Game.UpdatePriorityCharacters.Contains(CharacterList[i])) continue;
+          if (GameMain.LuaCs.Game.UpdatePriorityCharacters.Contains(Character.CharacterList[i])) continue;
 
-          CharacterList[i].Update(deltaTime * CharacterUpdateInterval, cam);
+          Character.CharacterList[i].Update(deltaTime * Character.CharacterUpdateInterval, cam);
         }
       }
 
