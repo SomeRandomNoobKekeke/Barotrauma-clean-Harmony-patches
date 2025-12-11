@@ -1,4 +1,4 @@
-## ~Updated to v1.11.4.1 (Winter Update 2025)~
+## Updated to v1.11.4.1 (Winter Update 2025)
 
 ## What is this?
 C# mod for Barotrauma that replaces Barotrauma code with identical Harmony patches
