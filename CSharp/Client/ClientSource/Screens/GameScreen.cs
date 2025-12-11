@@ -310,25 +310,14 @@ namespace CleanPatches
 
       //------------------------------------------------------------------------
       graphics.SetRenderTarget(_.renderTargetBackground);
-      if (Level.Loaded != null)
+      if (Level.Loaded == null)
       {
-        Level.Loaded.DrawBack(graphics, spriteBatch, _.cam);
-      }
-      else if (GameMain.GameSession.GameMode is TestGameMode testMode)
-      {
-        graphics.Clear(testMode.BackgroundParams.BackgroundColor);
-
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearWrap);
-        testMode.BackgroundParams.DrawBackgrounds(spriteBatch, _.cam);
-        spriteBatch.End();
-
-        spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.LinearWrap, DepthStencilState.DepthRead, null, null, _.cam.Transform);
-        testMode.BackgroundParams.DrawWaterParticles(spriteBatch, _.cam, testMode.WaterParticleOffset);
-        spriteBatch.End();
+        graphics.Clear(new Color(11, 18, 26, 255));
       }
       else
       {
-        graphics.Clear(new Color(11, 18, 26, 255));
+        //graphics.Clear(new Color(255, 255, 255, 255));
+        Level.Loaded.DrawBack(graphics, spriteBatch, _.cam);
       }
 
       spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.NonPremultiplied, depthStencilState: DepthStencilState.None, transformMatrix: _.cam.Transform);

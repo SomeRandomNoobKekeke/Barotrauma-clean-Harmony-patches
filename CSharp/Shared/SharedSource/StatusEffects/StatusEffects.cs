@@ -129,10 +129,7 @@ namespace CleanPatches
                 targetCharacter.AIController?.OnHealed(healer: element.User, healthChange);
                 if (element.User != null)
                 {
-                  if (element.Parent.CanGiveMedicalSkill)
-                  {
-                    targetCharacter.TryAdjustHealerSkill(element.User, healthChange);
-                  }
+                  targetCharacter.TryAdjustHealerSkill(element.User, healthChange);
 #if SERVER
                   GameMain.Server.KarmaManager.OnCharacterHealthChanged(targetCharacter, element.User, -healthChange, 0.0f);
 #endif

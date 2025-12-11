@@ -92,7 +92,7 @@ namespace CleanPatches
           }
         }
         if (!foundMatchingModifier && random > affliction.Probability) { continue; }
-        float finalDamageModifier = affliction.AffectedByAttackMultipliers ? damageMultiplier : 1.0f;
+        float finalDamageModifier = damageMultiplier;
         if (_.character.EmpVulnerability > 0 && affliction.Prefab.AfflictionType == AfflictionPrefab.EMPType)
         {
           finalDamageModifier *= _.character.EmpVulnerability;
