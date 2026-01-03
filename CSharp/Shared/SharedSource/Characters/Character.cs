@@ -75,7 +75,132 @@ namespace CleanPatches
         original: typeof(Character).GetMethod("DamageLimb", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_DamageLimb_Replace"))
       );
+
+      harmony.Patch(
+        original: typeof(Character).GetMethod("ApplyStatusEffects", AccessTools.all),
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_ApplyStatusEffects_Replace"))
+      );
     }
+
+
+    public static bool Character_ApplyStatusEffects_Replace(Character __instance, ActionType actionType, float deltaTime)
+    {
+      Character _ = __instance;
+
+      if (actionType == ActionType.OnEating)
+      {
+        float eatingRegen = _.Params.Health.HealthRegenerationWhenEating;
+        if (eatingRegen > 0)
+        {
+          _.CharacterHealth.ReduceAfflictionOnAllLimbs(AfflictionPrefab.DamageType, eatingRegen * deltaTime);
+        }
+      }
+      if (_.statusEffects.TryGetValue(actionType, out var statusEffectList))
+      {
+        foreach (StatusEffect statusEffect in statusEffectList)
+        {
+          if (statusEffect.type == ActionType.OnDamaged)
+          {
+            if (!statusEffect.HasRequiredAfflictions(_.LastDamage)) { continue; }
+            if (statusEffect.OnlyWhenDamagedByPlayer)
+            {
+              if (_.LastAttacker == null || !_.LastAttacker.IsPlayer)
+              {
+                continue;
+              }
+            }
+          }
+          if (statusEffect.HasTargetType(StatusEffect.TargetType.NearbyItems) ||
+              statusEffect.HasTargetType(StatusEffect.TargetType.NearbyCharacters))
+          {
+            _.targets.Clear();
+            statusEffect.AddNearbyTargets(_.WorldPosition, _.targets);
+            statusEffect.Apply(actionType, deltaTime, _, _.targets);
+          }
+          else if (statusEffect.targetLimbs != null)
+          {
+            foreach (var limbType in statusEffect.targetLimbs)
+            {
+              if (statusEffect.HasTargetType(StatusEffect.TargetType.AllLimbs))
+              {
+                // Target all matching limbs
+                foreach (var limb in _.AnimController.Limbs)
+                {
+                  if (limb.IsSevered) { continue; }
+                  if (limb.type == limbType)
+                  {
+                    ApplyToLimb(actionType, deltaTime, statusEffect, _, limb);
+                  }
+                }
+              }
+              else if (statusEffect.HasTargetType(StatusEffect.TargetType.Limb))
+              {
+                // Target just the first matching limb
+                Limb limb = _.AnimController.GetLimb(limbType);
+                if (limb != null)
+                {
+                  ApplyToLimb(actionType, deltaTime, statusEffect, _, limb);
+                }
+              }
+              else if (statusEffect.HasTargetType(StatusEffect.TargetType.LastLimb))
+              {
+                // Target just the last matching limb
+                Limb limb = _.AnimController.Limbs.LastOrDefault(l => l.type == limbType && !l.IsSevered && !l.Hidden);
+                if (limb != null)
+                {
+                  ApplyToLimb(actionType, deltaTime, statusEffect, _, limb);
+                }
+              }
+            }
+          }
+          else if (statusEffect.HasTargetType(StatusEffect.TargetType.AllLimbs))
+          {
+            // Target all limbs
+            foreach (var limb in _.AnimController.Limbs)
+            {
+              if (limb.IsSevered) { continue; }
+              ApplyToLimb(actionType, deltaTime, statusEffect, character: _, limb);
+            }
+          }
+          if (statusEffect.HasTargetType(StatusEffect.TargetType.This) || statusEffect.HasTargetType(StatusEffect.TargetType.Character))
+          {
+            statusEffect.Apply(actionType, deltaTime, _, _);
+          }
+          if (statusEffect.HasTargetType(StatusEffect.TargetType.Hull) && _.CurrentHull != null)
+          {
+            statusEffect.Apply(actionType, deltaTime, _, _.CurrentHull);
+          }
+        }
+        if (actionType != ActionType.OnDamaged && actionType != ActionType.OnSevered)
+        {
+          // OnDamaged is called only for the limb that is hit.
+          foreach (Limb limb in _.AnimController.Limbs)
+          {
+            limb.ApplyStatusEffects(actionType, deltaTime);
+          }
+        }
+      }
+      //OnActive effects are handled by the afflictions themselves
+      if (actionType != ActionType.OnActive)
+      {
+        _.CharacterHealth.ApplyAfflictionStatusEffects(actionType);
+      }
+
+      static void ApplyToLimb(ActionType actionType, float deltaTime, StatusEffect statusEffect, Character character, Limb limb)
+      {
+        statusEffect.sourceBody = limb.body;
+        statusEffect.Apply(actionType, deltaTime, entity: character, target: limb);
+      }
+
+      return false;
+    }
+
+
+
+
+
+
+
 
     public static bool Character_DamageLimb_Replace(Character __instance, ref AttackResult __result, Vector2 worldPosition, Limb hitLimb, IEnumerable<Affliction> afflictions, float stun, bool playSound, Vector2 attackImpulse, Character attacker = null, float damageMultiplier = 1, bool allowStacking = true, float penetration = 0f, bool shouldImplode = false, bool ignoreDamageOverlay = false, bool recalculateVitality = true)
     {
