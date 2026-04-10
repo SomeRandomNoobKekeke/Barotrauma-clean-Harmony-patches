@@ -102,7 +102,6 @@ namespace CleanPatches
       Vector2 offset = _.ParentSub == null ? Vector2.Zero : _.ParentSub.DrawPosition;
       lightEffect.World =
           Matrix.CreateTranslation(-new Vector3(_.position, 0.0f)) *
-          Matrix.CreateRotationZ(MathHelper.ToRadians(_.LightSourceParams.Rotation)) *
           Matrix.CreateTranslation(new Vector3(_.position + offset + _.translateVertices, 0.0f)) *
           transform;
 

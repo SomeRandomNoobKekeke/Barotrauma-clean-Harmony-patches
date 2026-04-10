@@ -39,7 +39,6 @@ namespace CleanPatches
     public static bool Controller_Update_Replace(float deltaTime, Camera cam, Controller __instance)
     {
       Controller _ = __instance;
-
       _.cam = cam;
       if (!_.ForceUserToStayAttached) { _.UserInCorrectPosition = false; }
 
@@ -50,57 +49,76 @@ namespace CleanPatches
         _.item.SendSignal(signal, "trigger_out");
       }
 
-      if (_.forceSelectNextFrame && _.user != null)
+      if (_.forceSelectNextFrame && _.User != null)
       {
-        _.user.SelectedItem = _.item;
+        _.User.SelectedItem = _.item;
       }
       _.forceSelectNextFrame = false;
       _.userCanInteractCheckTimer -= deltaTime;
 
-      if (_.user == null
-          || _.user.Removed
-          || !_.user.IsAnySelectedItem(_.item)
-          || (_.item.ParentInventory != null && !_.IsAttachedUser(_.user))
-          || (_.UsableIn == Controller.UseEnvironment.Water && !_.user.AnimController.InWater)
-          || (_.UsableIn == Controller.UseEnvironment.Air && _.user.AnimController.InWater)
-          || !_.CheckUserCanInteract())
+      if (_.User == null
+          || _.User.Removed
+          || (((_.User.Stun <= 0f && !_.User.IsKnockedDownOrRagdolled && !_.User.LockHands) || !_.ForceUserToStayAttached) && (!_.User.IsAnySelectedItem(_.item) || !_.CheckUserCanInteract()))
+          || (_.item.ParentInventory != null && !_.IsAttachedUser(_.User))
+          || (_.UsableIn == Controller.UseEnvironment.Water && !_.User.AnimController.InWater)
+          || (_.UsableIn == Controller.UseEnvironment.Air && _.User.AnimController.InWater)
+          || !_.CheckSpawnItem()
+          )
       {
-        if (_.user != null)
+        if (_.User != null)
         {
-          _.CancelUsing(_.user);
-          _.user = null;
+          _.CancelUsing(_.User);
+          _.User = null;
         }
         if (_.item.Connections == null || !_.IsToggle || string.IsNullOrEmpty(signal)) { _.IsActive = false; }
         return false;
       }
 
-      if (_.ForceUserToStayAttached && Vector2.DistanceSquared(_.item.WorldPosition, _.user.WorldPosition) > 0.1f)
+      if (_.ForceUserToStayAttached)
       {
-        _.user.TeleportTo(_.item.WorldPosition);
-        _.user.AnimController.Collider.ResetDynamics();
-        foreach (var limb in _.user.AnimController.Limbs)
+        _.teleportTransition = MathF.Min(_.teleportTransition + deltaTime * Controller.TeleportTransitionSpeed, 1f);
+
+        if (_.teleportTransition >= 1f)
         {
-          if (limb.Removed || limb.IsSevered) { continue; }
-          limb.body?.ResetDynamics();
+          // Transition is complete, if someone was holding this character, force them to deselect
+          // so they aren't holding the character that is now attached to the controller
+          if (_.User.SelectedBy != null)
+          {
+            _.User.SelectedBy.SelectedCharacter = null;
+          }
+        }
+
+        if (_.User == Character.Controlled
+            || _.teleportTransition < 1f
+            || Vector2.DistanceSquared(_.item.WorldPosition, _.User.WorldPosition) > 0.1f)
+        {
+          var targetPosition = Vector2.Lerp(_.teleportStartPosition, _.item.WorldPosition, _.teleportTransition);
+          _.User.TeleportTo(targetPosition);
+          _.User.AnimController.Collider.ResetDynamics();
+          foreach (var limb in _.User.AnimController.Limbs)
+          {
+            if (limb.Removed || limb.IsSevered) { continue; }
+            limb.body?.ResetDynamics();
+          }
         }
       }
 
-      _.user.AnimController.StartUsingItem();
+      _.User.AnimController.StartUsingItem();
 
       if (_.userPos != Vector2.Zero)
       {
-        Vector2 diff = (_.item.WorldPosition + _.userPos) - _.user.WorldPosition;
+        Vector2 diff = (_.item.WorldPosition + _.userPos) - _.User.WorldPosition;
 
-        if (_.user.AnimController.InWater)
+        if (_.User.AnimController.InWater)
         {
           if (diff.LengthSquared() > 30.0f * 30.0f)
           {
-            _.user.AnimController.TargetMovement = Vector2.Clamp(diff * 0.01f, -Vector2.One, Vector2.One);
-            _.user.AnimController.TargetDir = diff.X > 0.0f ? Direction.Right : Direction.Left;
+            _.User.AnimController.TargetMovement = Vector2.Clamp(diff * 0.01f, -Vector2.One, Vector2.One);
+            _.User.AnimController.TargetDir = diff.X > 0.0f ? Direction.Right : Direction.Left;
           }
           else
           {
-            _.user.AnimController.TargetMovement = Vector2.Zero;
+            _.User.AnimController.TargetMovement = Vector2.Zero;
             _.UserInCorrectPosition = true;
           }
         }
@@ -108,10 +126,10 @@ namespace CleanPatches
         {
           // Secondary items (like ladders or chairs) will control the character position over primary items
           // Only control the character position if the character doesn't have another secondary item already controlling it
-          if (!_.user.HasSelectedAnotherSecondaryItem(_.Item))
+          if (!_.User.HasSelectedAnotherSecondaryItem(_.Item))
           {
             diff.Y = 0.0f;
-            if (GameMain.NetworkMember != null && GameMain.NetworkMember.IsClient && _.user != Character.Controlled)
+            if (GameMain.NetworkMember != null && GameMain.NetworkMember.IsClient && _.User != Character.Controlled)
             {
               if (Math.Abs(diff.X) > 20.0f)
               {
@@ -121,48 +139,48 @@ namespace CleanPatches
               else if (Math.Abs(diff.X) > 0.1f)
               {
                 //aim to keep the collider at the correct position once close enough
-                _.user.AnimController.Collider.LinearVelocity = new Vector2(
+                _.User.AnimController.Collider.LinearVelocity = new Vector2(
                     diff.X * 0.1f,
-                    _.user.AnimController.Collider.LinearVelocity.Y);
+                    _.User.AnimController.Collider.LinearVelocity.Y);
               }
             }
             else if (Math.Abs(diff.X) > 10.0f)
             {
-              _.user.AnimController.TargetMovement = Vector2.Normalize(diff);
-              _.user.AnimController.TargetDir = diff.X > 0.0f ? Direction.Right : Direction.Left;
+              _.User.AnimController.TargetMovement = Vector2.Normalize(diff);
+              _.User.AnimController.TargetDir = diff.X > 0.0f ? Direction.Right : Direction.Left;
               return false;
             }
-            _.user.AnimController.TargetMovement = Vector2.Zero;
+            _.User.AnimController.TargetMovement = Vector2.Zero;
           }
           _.UserInCorrectPosition = true;
         }
       }
 
-      _.ApplyStatusEffects(ActionType.OnActive, deltaTime, _.user);
+      _.ApplyStatusEffects(ActionType.OnActive, deltaTime, _.User);
 
       if (_.limbPositions.Count == 0) { return false; }
 
-      _.user.AnimController.StartUsingItem();
+      _.User.AnimController.StartUsingItem();
 
-      if (_.user.SelectedItem != null)
+      if (_.User.SelectedItem != null)
       {
-        _.user.AnimController.ResetPullJoints(l => l.IsLowerBody);
+        _.User.AnimController.ResetPullJoints(l => l.IsLowerBody);
       }
       else
       {
-        _.user.AnimController.ResetPullJoints();
+        _.User.AnimController.ResetPullJoints();
       }
 
-      if (_.dir != 0) { _.user.AnimController.TargetDir = _.dir; }
+      if (_.dir != 0) { _.User.AnimController.TargetDir = _.dir; }
 
       foreach (LimbPos lb in _.limbPositions)
       {
-        Limb limb = _.user.AnimController.GetLimb(lb.LimbType);
+        Limb limb = _.User.AnimController.GetLimb(lb.LimbType);
         if (limb == null || !limb.body.Enabled) { continue; }
         // Don't move lower body limbs if there's another selected secondary item that should control them
-        if (limb.IsLowerBody && _.user.HasSelectedAnotherSecondaryItem(_.Item)) { continue; }
+        if (limb.IsLowerBody && _.User.HasSelectedAnotherSecondaryItem(_.Item)) { continue; }
         // Don't move hands if there's a selected primary item that should control them
-        if (limb.IsArm && _.Item == _.user.SelectedSecondaryItem && _.user.SelectedItem != null) { continue; }
+        if (limb.IsArm && _.Item == _.User.SelectedSecondaryItem && _.User.SelectedItem != null) { continue; }
         if (lb.AllowUsingLimb)
         {
           switch (lb.LimbType)
@@ -170,12 +188,12 @@ namespace CleanPatches
             case LimbType.RightHand:
             case LimbType.RightForearm:
             case LimbType.RightArm:
-              if (_.user.Inventory.GetItemInLimbSlot(InvSlotType.RightHand) != null) { continue; }
+              if (_.User.Inventory.GetItemInLimbSlot(InvSlotType.RightHand) != null) { continue; }
               break;
             case LimbType.LeftHand:
             case LimbType.LeftForearm:
             case LimbType.LeftArm:
-              if (_.user.Inventory.GetItemInLimbSlot(InvSlotType.LeftHand) != null) { continue; }
+              if (_.User.Inventory.GetItemInLimbSlot(InvSlotType.LeftHand) != null) { continue; }
               break;
           }
         }
@@ -185,7 +203,6 @@ namespace CleanPatches
         limb.PullJointEnabled = true;
         limb.PullJointWorldAnchorB = limb.SimPosition + ConvertUnits.ToSimUnits(diff);
       }
-
       return false;
     }
 
@@ -193,13 +210,13 @@ namespace CleanPatches
     {
       Controller _ = __instance;
 
-      if (activator != _.user)
+      if (activator != _.User)
       {
         __result = false; return false;
       }
-      if (_.user == null || _.user.Removed || !_.user.IsAnySelectedItem(_.item) || !_.user.CanInteractWith(_.item))
+      if (_.User == null || _.User.Removed || !_.User.IsAnySelectedItem(_.item) || !_.User.CanInteractWith(_.item))
       {
-        _.user = null;
+        _.User = null;
         __result = false; return false;
       }
 
@@ -218,7 +235,7 @@ namespace CleanPatches
       }
       else if (!string.IsNullOrEmpty(_.output))
       {
-        _.item.SendSignal(new Signal(_.output, sender: _.user), "trigger_out");
+        _.item.SendSignal(new Signal(_.output, sender: _.User), "trigger_out");
       }
 
       _.lastUsed = Timing.TotalTime;

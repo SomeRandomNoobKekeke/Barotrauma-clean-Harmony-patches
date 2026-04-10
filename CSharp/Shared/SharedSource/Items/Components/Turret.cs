@@ -300,8 +300,19 @@ namespace CleanPatches
       // Adjust the target character position (limb or submarine)
       if (_.currentTarget is Character targetCharacter)
       {
+        bool enemyInAnotherSub = targetCharacter.Submarine != null && targetCharacter.CurrentHull != null && targetCharacter.Submarine != _.item.Submarine;
+        bool canSeeTarget = true;
+        if (enemyInAnotherSub)
+        {
+          if (_.lastCanSeeTargetCheck.Time < Timing.TotalTime - Turret.LineOfSightCheckInterval ||
+              targetCharacter != _.lastCanSeeTargetCheck.Target)
+          {
+            canSeeTarget = targetCharacter.CanSeeTarget(_.Item);
+            _.lastCanSeeTargetCheck = (targetCharacter, canSeeTarget, Timing.TotalTime);
+          }
+        }
         //if the enemy is inside another sub, aim at the room they're in to make it less obvious that the enemy "knows" exactly where the target is
-        if (targetCharacter.Submarine != null && targetCharacter.CurrentHull != null && targetCharacter.Submarine != _.item.Submarine && !targetCharacter.CanSeeTarget(_.Item))
+        if (enemyInAnotherSub && !canSeeTarget)
         {
           targetPos = targetCharacter.CurrentHull.WorldPosition;
           if (closestDistance > maxDistance * maxDistance)
@@ -780,6 +791,7 @@ namespace CleanPatches
           foreach (Submarine sub in Submarine.Loaded)
           {
             if (sub == _.Item.Submarine) { continue; }
+            if (sub.IsRespawnShuttle) { continue; }
             if (_.item.Submarine != null)
             {
               if (Character.IsOnFriendlyTeam(_.item.Submarine.TeamID, sub.TeamID)) { continue; }
@@ -857,15 +869,28 @@ namespace CleanPatches
       }
       Vector2 start = ConvertUnits.ToSimUnits(_.item.WorldPosition);
       Vector2 end = ConvertUnits.ToSimUnits(target.WorldPosition);
+
+      bool doLineOfSightCheck = _.lastLineOfSightCheck.Time < Timing.TotalTimeUnpaused - Turret.LineOfSightCheckInterval;
+      if (doLineOfSightCheck)
+      {
+        _.lastLineOfSightCheck.WorldTarget = _.CheckLineOfSight(start, end);
+        _.lastLineOfSightCheck.Time = Timing.TotalTime;
+      }
+
       // Check that there's not other entities that shouldn't be targeted (like a friendly sub) between us and the target.
-      Body worldTarget = _.CheckLineOfSight(start, end);
+      Body worldTarget = _.lastLineOfSightCheck.WorldTarget;
       bool shoot;
       if (target.Submarine != null)
       {
-        start -= target.Submarine.SimPosition;
-        end -= target.Submarine.SimPosition;
-        Body transformedTarget = _.CheckLineOfSight(start, end);
-        shoot = _.CanShoot(transformedTarget, user: null, friendlyTag, _.TargetSubmarines) && (worldTarget == null || _.CanShoot(worldTarget, user: null, friendlyTag, _.TargetSubmarines));
+        if (doLineOfSightCheck)
+        {
+          start -= target.Submarine.SimPosition;
+          end -= target.Submarine.SimPosition;
+          _.lastLineOfSightCheck.TransformedTarget = _.CheckLineOfSight(start, end);
+        }
+        shoot =
+            (worldTarget == null || _.CanShoot(worldTarget, user: null, friendlyTag, _.TargetSubmarines)) &&
+            _.CanShoot(_.lastLineOfSightCheck.TransformedTarget, user: null, friendlyTag, _.TargetSubmarines);
       }
       else
       {

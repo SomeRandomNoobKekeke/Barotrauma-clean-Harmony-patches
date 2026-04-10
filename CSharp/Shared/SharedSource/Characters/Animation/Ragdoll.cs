@@ -40,6 +40,7 @@ namespace CleanPatches
     }
 
 
+
     public static bool Ragdoll_UpdateRagdoll_Replace(float deltaTime, Camera cam, Ragdoll __instance)
     {
       Ragdoll _ = __instance;
@@ -49,7 +50,7 @@ namespace CleanPatches
       while (_.impactQueue.Count > 0)
       {
         var impact = _.impactQueue.Dequeue();
-        _.ApplyImpact(impact.F1, impact.F2, impact.LocalNormal, impact.ImpactPos, impact.Velocity);
+        _.ApplyImpact(impact.F1, impact.F2, impact.WorldNormal, impact.ImpactPos, impact.Velocity);
       }
 
       _.CheckValidity();
@@ -92,9 +93,18 @@ namespace CleanPatches
       }
 
       float MaxVel = NetConfig.MaxPhysicsBodyVelocity;
-      _.Collider.LinearVelocity = new Vector2(
-          NetConfig.Quantize(_.Collider.LinearVelocity.X, -MaxVel, MaxVel, 12),
-          NetConfig.Quantize(_.Collider.LinearVelocity.Y, -MaxVel, MaxVel, 12));
+      if (GameMain.NetworkMember != null)
+      {
+        _.Collider.LinearVelocity = new Vector2(
+            NetConfig.Quantize(_.Collider.LinearVelocity.X, -MaxVel, MaxVel, 12),
+            NetConfig.Quantize(_.Collider.LinearVelocity.Y, -MaxVel, MaxVel, 12));
+      }
+      else
+      {
+        _.Collider.LinearVelocity = new Vector2(
+            MathHelper.Clamp(_.Collider.LinearVelocity.X, -MaxVel, MaxVel),
+            MathHelper.Clamp(_.Collider.LinearVelocity.Y, -MaxVel, MaxVel));
+      }
 
       if (_.forceStanding)
       {
@@ -148,9 +158,19 @@ namespace CleanPatches
 
       _.UpdateHullFlowForces(deltaTime);
 
-      if (_.currentHull == null ||
+      bool applyWaterForces =
+          _.currentHull == null ||
           _.currentHull.WaterVolume > _.currentHull.Volume * 0.95f ||
-          ConvertUnits.ToSimUnits(_.currentHull.Surface) > _.Collider.SimPosition.Y)
+          ConvertUnits.ToSimUnits(_.currentHull.Surface) > _.Collider.SimPosition.Y;
+#if CLIENT
+            if (Screen.Selected is Barotrauma.CharacterEditor.CharacterEditorScreen &&
+                _ is AnimController animController)
+            {
+                applyWaterForces = animController.CurrentAnimationParams is SwimParams;
+            }
+#endif
+
+      if (applyWaterForces)
       {
         _.Collider.ApplyWaterForces();
       }
@@ -191,7 +211,6 @@ namespace CleanPatches
 #if CLIENT
           _.Splash(limb, newHull);
 #endif
-
             //if the Character dropped into water, create a wave
             if (limb.LinearVelocity.Y < 0.0f)
             {
@@ -243,10 +262,10 @@ namespace CleanPatches
         else
         {
           // Falling -> ragdoll briefly if we are not moving at all, because we are probably stuck.
-          if (_.Collider.LinearVelocity == Vector2.Zero && !_.character.IsRemotePlayer)
+          if (_.Collider.LinearVelocity == Vector2.Zero && GameMain.NetworkMember is not { IsClient: true })
           {
             _.character.IsRagdolled = true;
-            if (_.character.IsBot)
+            if (!_.character.IsPlayer)
             {
               // Seems to work without this on player controlled characters -> not sure if we should call it always or just for the bots.
               _.character.SetInput(InputType.Ragdoll, hit: false, held: true);

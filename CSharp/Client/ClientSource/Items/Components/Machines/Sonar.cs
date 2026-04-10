@@ -146,7 +146,9 @@ namespace CleanPatches
         if (aiTarget.InDetectable) { continue; }
         if (aiTarget.SonarLabel.IsNullOrEmpty() || aiTarget.SoundRange <= 0.0f) { continue; }
 
-        if (Vector2.DistanceSquared(aiTarget.WorldPosition, transducerCenter) < aiTarget.SoundRange * aiTarget.SoundRange)
+        float sonarSoundRange = aiTarget.SoundRange * aiTarget.SoundRangeOnSonarMultiplier;
+
+        if (Vector2.DistanceSquared(aiTarget.WorldPosition, transducerCenter) < sonarSoundRange * sonarSoundRange)
         {
           _.DrawMarker(spriteBatch,
               aiTarget.SonarLabel.Value,
