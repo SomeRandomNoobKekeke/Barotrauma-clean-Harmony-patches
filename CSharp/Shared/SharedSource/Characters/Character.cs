@@ -1146,7 +1146,7 @@ namespace CleanPatches
       {
         wasRagdolled = _.IsRagdolled;
         _.IsRagdolled = _.IsKeyDown(InputType.Ragdoll);
-        if (_.IsRagdolled && _.IsBot && GameMain.NetworkMember is not { IsClient: true })
+        if (_.IsRagdolled && _.IsPlayer && GameMain.NetworkMember is not { IsClient: true })
         {
           _.ClearInput(InputType.Ragdoll);
         }
@@ -1198,7 +1198,19 @@ namespace CleanPatches
           _.AnimController.IgnorePlatforms = true;
         }
         _.AnimController.ResetPullJoints();
-        _.SelectedItem = _.SelectedSecondaryItem = null;
+
+        // Prevent us from detaching from the controller if we are attached to it OR detach if we
+        // manually ragdoll, in this case it should be similar to us deselecting the controller
+        if (!_.IsAttachedToController() ||
+            (_.IsKeyDown(InputType.Ragdoll)
+            // Let only the server do this check since the Ragdoll input for other clients is set to be held
+            // for stunned characters even if a character isn't manually ragdolling
+            && (GameMain.NetworkMember == null || GameMain.NetworkMember is { IsServer: true })))
+        {
+          _.SelectedItem = null;
+        }
+
+        _.SelectedSecondaryItem = null;
         return false;
       }
 
@@ -1226,6 +1238,13 @@ namespace CleanPatches
       bool MustDeselect(Item item)
       {
         if (item == null) { return false; }
+
+        // Prevent creatures from deselecting the controller if they are attached to it
+        if (IsAIControlled && !CanInteract && IsAttachedToController())
+        {
+          return false;
+        }
+
         if (!_.CanInteractWith(item)) { return true; }
         bool hasSelectableComponent = false;
         foreach (var component in item.Components)
