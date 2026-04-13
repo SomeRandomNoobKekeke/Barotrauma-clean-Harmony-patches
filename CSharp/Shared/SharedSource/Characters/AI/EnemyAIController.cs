@@ -51,26 +51,7 @@ namespace CleanPatches
       //doesn't do anything usually, but events may sometimes change monsters' (or pets' that use enemy AI) teams
       _.Character.UpdateTeam();
 
-      bool ignorePlatforms = _.Character.AnimController.TargetMovement.Y < -0.5f && (-_.Character.AnimController.TargetMovement.Y > Math.Abs(_.Character.AnimController.TargetMovement.X));
-      if (_.steeringManager == _.insideSteering)
-      {
-        var currPath = _.PathSteering.CurrentPath;
-        if (currPath != null && currPath.CurrentNode != null)
-        {
-          if (currPath.CurrentNode.SimPosition.Y < _.Character.AnimController.GetColliderBottom().Y)
-          {
-            // Don't allow to jump from too high.
-            float allowedJumpHeight = _.Character.AnimController.ImpactTolerance / 2;
-            float height = Math.Abs(currPath.CurrentNode.SimPosition.Y - _.Character.SimPosition.Y);
-            ignorePlatforms = height < allowedJumpHeight;
-          }
-        }
-        if (_.Character.IsClimbing && _.PathSteering.IsNextLadderSameAsCurrent)
-        {
-          _.Character.AnimController.TargetMovement = new Vector2(0.0f, Math.Sign(_.Character.AnimController.TargetMovement.Y));
-        }
-      }
-      _.Character.AnimController.IgnorePlatforms = ignorePlatforms;
+      _.HandleLaddersAndPlatforms(deltaTime);
 
       if (Math.Abs(_.Character.AnimController.movement.X) > 0.1f && !_.Character.AnimController.InWater &&
           (GameMain.NetworkMember == null || GameMain.NetworkMember.IsServer || Character.Controlled == _.Character))

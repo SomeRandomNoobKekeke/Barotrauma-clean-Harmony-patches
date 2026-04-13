@@ -7,6 +7,7 @@ using System.Linq;
 using Barotrauma;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
+using System.IO;
 
 using System.Runtime.CompilerServices;
 [assembly: IgnoresAccessChecksTo("Barotrauma")]
@@ -33,7 +34,6 @@ namespace CleanPatches
 #elif SERVER
       PatchOnServer();
 #endif
-
       log("Clean harmony patches compiled without errors");
     }
 
@@ -55,6 +55,7 @@ namespace CleanPatches
         {
           if (Attribute.IsDefined(mi, typeof(ThisIsHowToPatchIt)))
           {
+            log(mi);
             mi.Invoke(null, new object[] { });
           }
         }
@@ -66,6 +67,16 @@ namespace CleanPatches
       //   log($"{method.DeclaringType}.{method}");
       // }
     }
+
+    public static void point([CallerFilePath] string source = "", [CallerLineNumber] int lineNumber = 0)
+    {
+      var fi = new FileInfo(source);
+      DebugConsole.NewMessage(
+        $"point {fi.Directory.Name}/{fi.Name}:{lineNumber}",
+        Color.Pink
+      );
+    }
+
 
     public static void log(object msg, Color? cl = null)
     {

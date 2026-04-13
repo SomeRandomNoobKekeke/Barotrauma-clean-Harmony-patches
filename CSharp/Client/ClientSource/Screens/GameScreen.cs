@@ -314,7 +314,7 @@ namespace CleanPatches
       {
         Level.Loaded.DrawBack(graphics, spriteBatch, _.cam);
       }
-      else if (GameMain.GameSession.GameMode is TestGameMode testMode)
+      else if (GameMain.GameSession?.GameMode is TestGameMode testMode)
       {
         graphics.Clear(testMode.BackgroundParams.BackgroundColor);
 

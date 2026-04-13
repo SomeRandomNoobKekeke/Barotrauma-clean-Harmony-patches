@@ -1,3 +1,5 @@
+// #define CLIENT
+// #define SERVER
 
 using System;
 using System.Reflection;
@@ -82,25 +84,16 @@ namespace CleanPatches
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_ApplyStatusEffects_Replace"))
       );
 
-      harmony.Patch(
-        original: typeof(Character).GetMethod("UpdateControlled", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_UpdateControlled_Replace"))
-      );
 
-      harmony.Patch(
-        original: typeof(Character).GetMethod("ControlLocalPlayer", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_ControlLocalPlayer_Replace"))
-      );
+
+
 
       harmony.Patch(
         original: typeof(Character).GetMethod("DoInteractionUpdate", AccessTools.all),
         prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_DoInteractionUpdate_Replace"))
       );
 
-      harmony.Patch(
-        original: typeof(Character).GetMethod("UpdateInteractablesInRange", AccessTools.all),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_UpdateInteractablesInRange_Replace"))
-      );
+
 
       harmony.Patch(
         original: typeof(Character).GetMethod("CanInteractWith", AccessTools.all, new Type[]{
@@ -108,7 +101,7 @@ namespace CleanPatches
           typeof(float).MakeByRefType(),
           typeof(bool),
         }),
-        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_CanInteractWith_Item_Replace "))
+        prefix: new HarmonyMethod(typeof(Mod).GetMethod("Character_CanInteractWith_Item_Replace"))
       );
     }
 
@@ -124,13 +117,14 @@ namespace CleanPatches
 #if CLIENT
       if (Screen.Selected == GameMain.SubEditorScreen) { hidden = false; }
 #endif
-      if (!_.CanInteract || hidden || !item.IsInteractable(_)) { __result = false; return false; }
 
       Controller controller = item.GetComponent<Controller>();
       if (controller != null && _.IsAnySelectedItem(item) && controller.IsAttachedUser(_))
       {
         __result = true; return false;
       }
+
+      if (!_.CanInteract || hidden || !item.IsInteractable(_)) { __result = false; return false; }
 
       if (item.ParentInventory != null)
       {
@@ -253,7 +247,9 @@ namespace CleanPatches
         }
       }
 
-      if (!item.Prefab.InteractThroughWalls && Screen.Selected != GameMain.SubEditorScreen && !insideTrigger)
+      //note that the distance to item should be set to 0 above if the character is within the item's bounding box
+      bool closeEnoughToIgnoreVisibilityCheck = distanceToItem <= 0.1f;
+      if (!item.Prefab.InteractThroughWalls && Screen.Selected != GameMain.SubEditorScreen && !insideTrigger && !closeEnoughToIgnoreVisibilityCheck)
       {
         var body = Submarine.CheckVisibility(_.SimPosition, itemPosition, ignoreLevel: true);
         bool itemCenterVisible = CheckBody(body, item);
@@ -282,7 +278,6 @@ namespace CleanPatches
         {
           __result = itemCenterVisible; return false;
         }
-
       }
 
       __result = true; return false;
@@ -334,52 +329,7 @@ namespace CleanPatches
     }
 
 
-    public static bool Character_UpdateInteractablesInRange_Replace(Character __instance)
-    {
-      Character _ = __instance;
 
-      // keep two lists to detect changes to the current state of interactables in range
-      _.previousInteractablesInRange.Clear();
-      _.previousInteractablesInRange.AddRange(_.interactablesInRange);
-
-      _.interactablesInRange.Clear();
-
-      //use the list of visible entities if it exists
-      var entityList = Submarine.VisibleEntities ?? Item.ItemList;
-
-      foreach (MapEntity entity in entityList)
-      {
-        if (entity is not Item item) { continue; }
-
-        if (item.body != null && !item.body.Enabled) { continue; }
-
-        if (item.ParentInventory != null) { continue; }
-
-        if (item.Prefab.RequireCampaignInteract &&
-            item.CampaignInteractionType == CampaignMode.InteractionType.None)
-        {
-          continue;
-        }
-
-        if (Screen.Selected is SubEditorScreen { WiringMode: true } &&
-            item.GetComponent<ConnectionPanel>() == null)
-        {
-          continue;
-        }
-
-        if (_.CanInteractWith(item))
-        {
-          _.interactablesInRange.Add(item);
-        }
-      }
-
-      if (!_.interactablesInRange.SequenceEqual(_.previousInteractablesInRange))
-      {
-        InteractionLabelManager.RefreshInteractablesInRange(_.interactablesInRange);
-      }
-
-      return false;
-    }
 
 
     public static bool Character_DoInteractionUpdate_Replace(Character __instance, float deltaTime, Vector2 mouseSimPos)
@@ -396,7 +346,11 @@ namespace CleanPatches
 
       if (!_.CanInteract)
       {
-        _.SelectedItem = _.SelectedSecondaryItem = null;
+        if (!_.IsAttachedToController())
+        {
+          _.SelectedItem = null;
+        }
+        _.SelectedSecondaryItem = null;
         _.focusedItem = null;
         if (!_.AllowInput)
         {
@@ -415,8 +369,16 @@ namespace CleanPatches
           {
             if (!PlayerInput.PrimaryMouseButtonHeld() || Barotrauma.Inventory.DraggingItemToWorld)
             {
-              _.FocusedCharacter = _.CanInteract || _.CanEat ? _.FindCharacterAtPosition(mouseSimPos) : null;
-              if (_.FocusedCharacter != null && !_.CanSeeTarget(_.FocusedCharacter)) { _.FocusedCharacter = null; }
+              //don't allow focusing on anyone when the health window is open (avoids accidentally selecting someone when closing the window)
+              if (CharacterHealth.OpenHealthWindow != null)
+              {
+                _.FocusedCharacter = null;
+              }
+              else
+              {
+                _.FocusedCharacter = _.CanInteract || _.CanEat ? _.FindCharacterAtPosition(mouseSimPos) : null;
+                if (_.FocusedCharacter != null && !_.CanSeeTarget(_.FocusedCharacter)) { _.FocusedCharacter = null; }
+              }
               float aimAssist = GameSettings.CurrentConfig.AimAssistAmount * (_.AnimController.InWater ? 1.5f : 1.0f);
               if (_.HeldItems.Any(it => it?.GetComponent<Wire>()?.IsActive ?? false))
               {
@@ -552,13 +514,13 @@ namespace CleanPatches
 #elif SERVER
           if (GameMain.Server?.ConnectedClients is { } clients)
           {
-              foreach (Client c in clients)
-              {
-                  if (c.Character != _) { continue; }
+            foreach (Client c in clients)
+            {
+              if (c.Character != _) { continue; }
 
-                  HealingCooldown.SetCooldown(c);
-                  break;
-              }
+              HealingCooldown.SetCooldown(c);
+              break;
+            }
           }
 #endif
         }
@@ -611,229 +573,6 @@ namespace CleanPatches
 
       return false;
     }
-
-
-    public static bool Character_ControlLocalPlayer_Replace(Character __instance, float deltaTime, Camera cam, bool moveCam = true)
-    {
-      Character _ = __instance;
-
-      if (Character.DisableControls || GUI.InputBlockingMenuOpen)
-      {
-        foreach (Key key in _.keys)
-        {
-          if (key == null) { continue; }
-          key.Reset();
-        }
-        if (GUI.InputBlockingMenuOpen || ConversationAction.IsDialogOpen)
-        {
-          _.cursorPosition =
-              _.Position + PlayerInput.MouseSpeed.ClampLength(10.0f); //apply a little bit of movement to the cursor pos to prevent AFK kicking
-        }
-      }
-      else
-      {
-        _.wasFiring |= _.keys[(int)InputType.Aim].Held && _.keys[(int)InputType.Shoot].Held;
-        for (int i = 0; i < _.keys.Length; i++)
-        {
-          _.keys[i].SetState();
-        }
-
-        if (CharacterInventory.IsMouseOnInventory &&
-            !_.keys[(int)InputType.Aim].Held &&
-            CharacterHUD.ShouldDrawInventory(_))
-        {
-          ResetInputIfPrimaryMouse(InputType.Use);
-          ResetInputIfPrimaryMouse(InputType.Shoot);
-          ResetInputIfPrimaryMouse(InputType.Select);
-          void ResetInputIfPrimaryMouse(InputType inputType)
-          {
-            if (GameSettings.CurrentConfig.KeyMap.Bindings[inputType].MouseButton == MouseButton.PrimaryMouse)
-            {
-              _.keys[(int)inputType].Reset();
-            }
-          }
-        }
-
-        _.ShowInteractionLabels = _.keys[(int)InputType.ShowInteractionLabels].Held;
-
-        if (_.ShowInteractionLabels)
-        {
-          _.focusedItem = InteractionLabelManager.HoveredItem;
-        }
-
-        //if we were firing (= pressing the aim and shoot keys at the same time)
-        //and the fire key is the same as Select or Use, reset the key to prevent accidentally selecting/using items
-        if (_.wasFiring && !_.keys[(int)InputType.Shoot].Held)
-        {
-          if (GameSettings.CurrentConfig.KeyMap.Bindings[InputType.Shoot] == GameSettings.CurrentConfig.KeyMap.Bindings[InputType.Select])
-          {
-            _.keys[(int)InputType.Select].Reset();
-          }
-          if (GameSettings.CurrentConfig.KeyMap.Bindings[InputType.Shoot] == GameSettings.CurrentConfig.KeyMap.Bindings[InputType.Use])
-          {
-            _.keys[(int)InputType.Use].Reset();
-          }
-          _.wasFiring = false;
-        }
-
-        float targetOffsetAmount = 0.0f;
-        if (moveCam)
-        {
-          if (!_.IsProtectedFromPressure && (_.AnimController.CurrentHull == null || _.AnimController.CurrentHull.LethalPressure > 0.0f))
-          {
-            //wait until the character has been in pressure for one second so the zoom doesn't
-            //"flicker" in and out if the pressure fluctuates around the minimum threshold
-            _.pressureEffectTimer += deltaTime;
-            if (_.pressureEffectTimer > 1.0f)
-            {
-              float pressure = _.AnimController.CurrentHull == null ? 100.0f : _.AnimController.CurrentHull.LethalPressure;
-              float zoomInEffectStrength = MathHelper.Clamp(pressure / 100.0f, 0.0f, 1.0f);
-              cam.Zoom = MathHelper.Lerp(cam.Zoom,
-                  cam.DefaultZoom + (Math.Max(pressure, 10) / 150.0f) * Rand.Range(0.9f, 1.1f),
-                  zoomInEffectStrength);
-            }
-          }
-          else
-          {
-            _.pressureEffectTimer = 0.0f;
-          }
-
-          if (_.IsHumanoid)
-          {
-            cam.OffsetAmount = 250.0f;// MathHelper.Lerp(cam.OffsetAmount, 250.0f, deltaTime);
-          }
-          else
-          {
-            //increased visibility range when controlling large a non-humanoid
-            cam.OffsetAmount = MathHelper.Clamp(_.Mass, 250.0f, 1500.0f);
-          }
-        }
-
-        _.UpdateLocalCursor(cam);
-
-        if (_.IsKeyHit(InputType.ToggleRun))
-        {
-          _.ToggleRun = !_.ToggleRun;
-        }
-
-        Vector2 mouseSimPos = ConvertUnits.ToSimUnits(_.cursorPosition);
-        if (GUI.PauseMenuOpen)
-        {
-          cam.OffsetAmount = targetOffsetAmount = 0.0f;
-        }
-        else if (Barotrauma.Lights.LightManager.ViewTarget is Item item && item.Prefab.FocusOnSelected)
-        {
-          cam.OffsetAmount = targetOffsetAmount = item.Prefab.OffsetOnSelected * item.OffsetOnSelectedMultiplier;
-        }
-        else if (_.HeldItems.SelectMany(static item => item.GetComponents<Holdable>())
-                          .Where(static holdable => holdable.Aimable)
-                          .MaxOrNull(static holdable => holdable.CameraAimOffset) is float maxOffset
-            && maxOffset > 0f && _.IsKeyDown(InputType.Aim))
-        {
-          cam.OffsetAmount = targetOffsetAmount = maxOffset;
-        }
-        else if (_.SelectedItem != null && _.ViewTarget == null && !_.IsIncapacitated &&
-            _.SelectedItem.Components.Any(ic => ic?.GuiFrame != null && ic.ShouldDrawHUD(_)))
-        {
-          cam.OffsetAmount = targetOffsetAmount = 0.0f;
-          _.cursorPosition =
-              _.Position +
-              PlayerInput.MouseSpeed.ClampLength(10.0f); //apply a little bit of movement to the cursor pos to prevent AFK kicking
-        }
-        else if (!GameSettings.CurrentConfig.EnableMouseLook)
-        {
-          cam.OffsetAmount = targetOffsetAmount = 0.0f;
-        }
-        else if (Barotrauma.Lights.LightManager.ViewTarget == _)
-        {
-          if (GUI.PauseMenuOpen || _.IsIncapacitated)
-          {
-            if (deltaTime > 0.0f)
-            {
-              cam.OffsetAmount = targetOffsetAmount = 0.0f;
-            }
-          }
-          else if (Character.IsMouseOnUI)
-          {
-            targetOffsetAmount = cam.OffsetAmount;
-          }
-          else if (Vector2.DistanceSquared(_.AnimController.Limbs[0].SimPosition, mouseSimPos) > 1.0f)
-          {
-            Body body = Submarine.CheckVisibility(_.AnimController.Limbs[0].SimPosition, mouseSimPos);
-            Structure structure = body?.UserData as Structure;
-
-            float sightDist = Submarine.LastPickedFraction;
-            if (body?.UserData is Structure && !((Structure)body.UserData).CastShadow)
-            {
-              sightDist = 1.0f;
-            }
-            targetOffsetAmount = Math.Max(250.0f, sightDist * 500.0f);
-          }
-        }
-
-        cam.OffsetAmount = MathHelper.Lerp(cam.OffsetAmount, targetOffsetAmount, 0.05f);
-        _.DoInteractionUpdate(deltaTime, mouseSimPos);
-      }
-
-      if (!GUI.InputBlockingMenuOpen)
-      {
-        if (_.SelectedItem != null &&
-            (_.SelectedItem.ActiveHUDs.Any(ic => ic.GuiFrame != null && ic.CloseByClickingOutsideGUIFrame && HUD.CloseHUD(ic.GuiFrame.Rect)) ||
-            ((_.ViewTarget as Item)?.Prefab.FocusOnSelected ?? false) && PlayerInput.KeyHit(Microsoft.Xna.Framework.Input.Keys.Escape)))
-        {
-          if (GameMain.Client != null)
-          {
-            //emulate a Deselect input to get the character to deselect the item server-side
-            _.EmulateInput(InputType.Deselect);
-          }
-          //reset focus to prevent us from accidentally interacting with another entity
-          _.focusedItem = null;
-          _.FocusedCharacter = null;
-          _.findFocusedTimer = 0.2f;
-          _.SelectedItem = null;
-        }
-      }
-
-      Character.DisableControls = false;
-
-      return false;
-    }
-
-
-
-
-    public static bool Character_UpdateControlled_Replace(Character __instance, float deltaTime, Camera cam)
-    {
-      Character _ = __instance;
-
-      if (Character.controlled != _) { return false; }
-
-      _.ControlLocalPlayer(deltaTime, cam);
-
-      Barotrauma.Lights.LightManager.ViewTarget = _;
-      CharacterHUD.Update(deltaTime, _, cam);
-
-      if (_.hudProgressBars.Any())
-      {
-        foreach (var progressBar in _.hudProgressBars)
-        {
-          if (progressBar.Value.FadeTimer <= 0.0f)
-          {
-            _.progressBarRemovals.Add(progressBar);
-            continue;
-          }
-          progressBar.Value.Update(deltaTime);
-        }
-        if (_.progressBarRemovals.Any())
-        {
-          _.progressBarRemovals.ForEach(pb => _.hudProgressBars.Remove(pb.Key));
-          _.progressBarRemovals.Clear();
-        }
-      }
-
-      return false;
-    }
-
 
     public static bool Character_ApplyStatusEffects_Replace(Character __instance, ActionType actionType, float deltaTime)
     {
@@ -1267,9 +1006,9 @@ namespace CleanPatches
 
       _.obstructVisionAmount = Math.Max(_.obstructVisionAmount - deltaTime, 0.0f);
 
-      if (_.Inventory != null)
+      if (_.Inventory != null && Vector2.DistanceSquared(_.lastInventoryItemSetTransformPosition, _.Position) > 0.1f)
       {
-        //do not check for duplicates: _ is code is called very frequently, and duplicates don't matter here,
+        //do not check for duplicates: this is code is called very frequently, and duplicates don't matter here,
         //so it's better just to avoid the relatively expensive duplicate check
         foreach (Item item in _.Inventory.GetAllItems(checkForDuplicates: false))
         {
@@ -1277,6 +1016,7 @@ namespace CleanPatches
           item.SetTransform(_.SimPosition, 0.0f);
           item.Submarine = _.Submarine;
         }
+        _.lastInventoryItemSetTransformPosition = _.Position;
       }
 
       _.HideFace = false;
@@ -1406,7 +1146,7 @@ namespace CleanPatches
       {
         wasRagdolled = _.IsRagdolled;
         _.IsRagdolled = _.IsKeyDown(InputType.Ragdoll);
-        if (_.IsRagdolled && _.IsBot && GameMain.NetworkMember is not { IsClient: true })
+        if (_.IsRagdolled && _.IsPlayer && GameMain.NetworkMember is not { IsClient: true })
         {
           _.ClearInput(InputType.Ragdoll);
         }
@@ -1458,7 +1198,19 @@ namespace CleanPatches
           _.AnimController.IgnorePlatforms = true;
         }
         _.AnimController.ResetPullJoints();
-        _.SelectedItem = _.SelectedSecondaryItem = null;
+
+        // Prevent us from detaching from the controller if we are attached to it OR detach if we
+        // manually ragdoll, in this case it should be similar to us deselecting the controller
+        if (!_.IsAttachedToController() ||
+            (_.IsKeyDown(InputType.Ragdoll)
+            // Let only the server do this check since the Ragdoll input for other clients is set to be held
+            // for stunned characters even if a character isn't manually ragdolling
+            && (GameMain.NetworkMember == null || GameMain.NetworkMember is { IsServer: true })))
+        {
+          _.SelectedItem = null;
+        }
+
+        _.SelectedSecondaryItem = null;
         return false;
       }
 
@@ -1486,6 +1238,13 @@ namespace CleanPatches
       bool MustDeselect(Item item)
       {
         if (item == null) { return false; }
+
+        // Prevent creatures from deselecting the controller if they are attached to it
+        if (_.IsAIControlled && !_.CanInteract && _.IsAttachedToController())
+        {
+          return false;
+        }
+
         if (!_.CanInteractWith(item)) { return true; }
         bool hasSelectableComponent = false;
         foreach (var component in item.Components)
@@ -1570,6 +1329,12 @@ namespace CleanPatches
         }
       }
 
+      // Try to detach from the controller if we are currently attached to something that is dangerous for our character
+      if (aiControlled && _.Stun <= 0f && !_.IsKnockedDownOrRagdolled && !_.LockHands && _.ShouldAvoidStayingAttachedToController())
+      {
+        _.SelectedItem = null;
+      }
+
       if (GameMain.NetworkMember != null)
       {
         if (GameMain.NetworkMember.IsServer)
@@ -1618,7 +1383,7 @@ namespace CleanPatches
       {
         _.attackCoolDown -= deltaTime;
       }
-      else if (_.IsKeyDown(InputType.Attack))
+      else if (_.IsKeyDown(InputType.Attack) && !_.IsAttachedToController())
       {
         //normally the attack target, where to aim the attack and such is handled by EnemyAIController,
         //but in the case of player-controlled monsters, we handle it here

@@ -59,7 +59,7 @@ namespace CleanPatches
       if (!_.statusEffects.TryGetValue(actionType, out var statusEffectList)) { return false; }
       foreach (StatusEffect statusEffect in statusEffectList)
       {
-        if (statusEffect.ShouldWaitForInterval(_.character, deltaTime)) { return false; }
+        if (statusEffect.ShouldWaitForInterval(_.character, deltaTime)) { continue; }
 
         statusEffect.sourceBody = _.body;
         if (statusEffect.type == ActionType.OnDamaged)
